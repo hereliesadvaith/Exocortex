@@ -53,15 +53,16 @@ gcc -O2 -shared -fPIC -o /usr/local/lib/libfakeshm.so pgshm/fakeshm.c
 Create the cluster with the shim loaded, and make it permanent for the cluster:
 
 ```sh
-chown -R postgres:postgres /var/lib/postgresql
-mkdir -p /var/run/postgresql && chown postgres:postgres /var/run/postgresql
+mkdir -p /var/run/postgresql
 
 LD_PRELOAD=/usr/local/lib/libfakeshm.so pg_createcluster 17 main
 echo "LD_PRELOAD = '/usr/local/lib/libfakeshm.so'" >> /etc/postgresql/17/main/environment
 
-pg_ctlcluster 17 main start
+su postgres -c "pg_ctlcluster 17 main start"
 pg_lsclusters          # should show 17 main ... online
 ```
+
+Start the cluster as the `postgres` user, not as root. Under PRoot, `chown` is a no-op and every file shows as owned by whichever user is looking, so as root the data directory looks root-owned and `pg_ctlcluster` refuses to start it. As `postgres`, the same directory looks owned by `postgres`. `start.sh` does this for you.
 
 Set a password for the database user the server will use:
 
@@ -169,6 +170,7 @@ Then run `/mcp` inside Claude Code to authenticate.
 | `KeyError: 'POSTGRES_PASSWORD'` (or another variable) on start | That variable is missing from `.env`. |
 | Every client gets `401` after signing in | Your GitHub username isn't in `GITHUB_ALLOWED_USERS`, or the callback URL in the OAuth app doesn't match your domain. |
 | `QueryCanceled: canceling statement due to statement timeout` | The query took longer than `QUERY_TIMEOUT_MS`. Speed it up or raise the limit. |
+| `Data directory /var/lib/postgresql/17/main must not be owned by root` | You started Postgres as root. Run `su postgres -c "pg_ctlcluster 17 main start"` instead (`chown` won't help under PRoot). |
 | `already running` from `start.sh` | Run `./start.sh stop` first. |
 
 ## Security notes

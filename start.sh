@@ -32,7 +32,8 @@ fi
 # Postgres doesn't come back on its own after a phone restart.
 if ! pg_lsclusters -h 2>/dev/null | grep -q " online"; then
   echo "starting postgres..."
-  pg_ctlcluster 17 main start
+  # Run as postgres: under PRoot every file looks root-owned to root, and chown is a no-op.
+  su postgres -c "pg_ctlcluster 17 main start"
 fi
 
 # Keep Android from killing us when the screen is off (only exists in Termux).
