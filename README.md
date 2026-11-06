@@ -98,25 +98,15 @@ Copy the **Client ID** and generate a **Client secret**.
 git clone https://github.com/hereliesadvaith/exocortex.git
 cd exocortex
 python3 -m venv .venv
-.venv/bin/pip install "fastmcp==4.1.6" ngrok "psycopg[binary]" python-dotenv
+.venv/bin/pip install -r requirements.txt
 ```
 
-Create `.env` (it's gitignored, so keep it private):
+Create your `.env` from the template and fill it in. It's gitignored, so keep it private:
 
 ```sh
-cat > .env <<'EOF'
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=choose-a-strong-password
-POSTGRES_DB=postgres
-# MCP server (GitHub OAuth)
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
-GITHUB_ALLOWED_USERS=your-github-username
-# ngrok (tunnel started by server.py; base URL is https://NGROK_DOMAIN)
-NGROK_AUTHTOKEN=...
-NGROK_DOMAIN=your-name.ngrok-free.dev
-EOF
+cp .env.example .env
 chmod 600 .env
+nano .env   # or any editor
 ```
 
 ### All settings

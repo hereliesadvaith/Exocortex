@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "fastmcp==4.1.6",  # pinned: AllowlistedGitHubProvider relies on the "login" claim
+#   "fastmcp==4.1.6",  # keep in sync with requirements.txt
 #   "ngrok",
 #   "psycopg[binary]",
 #   "python-dotenv",
