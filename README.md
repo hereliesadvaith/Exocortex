@@ -6,7 +6,7 @@ A habit tracker page for the phone: tick off today's habits, step counts and min
 phone browser ──► nginx (127.0.0.1:80) ──/habits/──► FastAPI (app.py, 127.0.0.1:8001) ──► PostgreSQL, schema `habits`
 ```
 
-It runs on its own, from its own directory, with its own virtualenv, settings and logs. It only shares the Postgres server, where the `habits` schema lives (`schema.sql`).
+It runs on its own, from its own directory, with its own virtualenv, settings and logs. It shares the Postgres server, where the `habits` schema lives (`schema.sql`), and nginx's localhost site, which comes from the exocortex repo (`main` branch, `nginx/localhost.conf`) along with the home page at http://localhost/.
 
 ## Setup (inside Debian, as root)
 
@@ -42,8 +42,8 @@ nano .env
 ## Run it
 
 ```sh
-./start.sh start     # starts Postgres if it's down, then the app and nginx
-./start.sh stop
+./start.sh start     # starts Postgres if it's down, then the app, and nginx if it's down
+./start.sh stop      # stops the app only; nginx keeps serving the rest
 ./start.sh restart
 ./start.sh status
 ./start.sh update    # git pull, reinstall requirements if they changed, restart
@@ -52,7 +52,7 @@ tail -f habits.log
 
 After a phone reboot: open Termux → `proot-distro login debian` → `/root/habits/start.sh start`.
 
-`start.sh` links `nginx.conf` in as `/etc/nginx/sites-enabled/habits` and removes Debian's default site. Both nginx and the app listen on 127.0.0.1 only, so the page has no login: only apps on the phone can reach it.
+`nginx.conf` here is just the `/habits/` locations. `start.sh` links it in as `/etc/nginx/localhost.d/habits.conf`, which the exocortex localhost site includes, and links `app.json` into `/etc/exocortex/apps/` so the home page shows a Habits icon with its status. Start the exocortex server first on a fresh setup; `./start.sh status` says whether the include is in place. Both nginx and the app listen on 127.0.0.1 only, so the page has no login: only apps on the phone can reach it.
 
 ## API
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Habit tracker: FastAPI (uvicorn) on 127.0.0.1:8001 behind nginx on 127.0.0.1:80,
 # so it opens at http://localhost/habits/ on the phone.
-#   ./start.sh start     start Postgres (if down), the app and nginx, in the background
-#   ./start.sh stop      stop the app and nginx (Postgres keeps running)
+# nginx's localhost site comes from the exocortex repo; this only adds /habits/ to it.
+#   ./start.sh start     start Postgres (if down), the app, and nginx (if down)
+#   ./start.sh stop      stop the app (nginx and Postgres keep running for the rest)
 #   ./start.sh restart   stop, then start
 #   ./start.sh status    show whether each part is up
 #   ./start.sh update    git pull --ff-only, reinstall requirements, restart
@@ -12,7 +13,8 @@ cd "$(dirname "$0")"
 PIDFILE=habits.pid
 LOG=habits.log
 PORT=8001
-SITE=/etc/nginx/sites-enabled/habits
+SNIPPETS=/etc/nginx/localhost.d   # `location` blocks the localhost site includes
+APPS=/etc/exocortex/apps          # app.json files the home page lists
 export TZ="${TZ:-Asia/Kolkata}"   # proot's Debian runs on UTC; log in local time
 
 app_up() {
@@ -21,6 +23,11 @@ app_up() {
 }
 
 nginx_up() { [[ -f /run/nginx.pid ]] && kill -0 "$(cat /run/nginx.pid)" 2>/dev/null; }
+
+# Is there a server that pulls in $SNIPPETS? (The exocortex localhost site does.)
+snippets_included() { grep -RqsE "include\s+$SNIPPETS/" /etc/nginx/sites-enabled/ /etc/nginx/conf.d/; }
+
+link_to() { [[ -L $2 && $(readlink -f "$2") == "$1" ]] || ln -sfn "$1" "$2"; }
 
 check_setup() {
   [[ -x .venv/bin/python ]] || { echo "no .venv: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2; exit 1; }
@@ -62,17 +69,17 @@ stop_app() {
 }
 
 start_nginx() {
-  if [[ ! -L $SITE || $(readlink -f $SITE) != "$PWD/nginx.conf" ]]; then
-    ln -sfn "$PWD/nginx.conf" $SITE
+  mkdir -p $SNIPPETS $APPS
+  link_to "$PWD/nginx.conf" $SNIPPETS/habits.conf
+  link_to "$PWD/app.json" $APPS/habits.json
+  # This app used to bring its own site; that's the exocortex repo's job now.
+  [[ -L /etc/nginx/sites-enabled/habits ]] && rm -f /etc/nginx/sites-enabled/habits
+  if ! snippets_included; then
+    echo "warning: no nginx site includes $SNIPPETS/*.conf yet, so /habits/ isn't served." >&2
+    echo "         Start the exocortex server (its start.sh sets up http://localhost/)." >&2
   fi
-  rm -f /etc/nginx/sites-enabled/default   # Debian's default site also wants port 80
   nginx -t -q
   if nginx_up; then nginx -s reload; else nginx; fi   # no systemd under PRoot
-}
-
-stop_nginx() {
-  nginx_up && nginx -s quit 2>/dev/null || true
-  for _ in $(seq 10); do nginx_up || break; sleep 0.5; done
 }
 
 start_all() {
@@ -90,7 +97,6 @@ case "${1:-}" in
     ;;
   stop)
     stop_app
-    stop_nginx
     echo "habits stopped"
     ;;
   restart)
@@ -100,6 +106,7 @@ case "${1:-}" in
   status)
     app_up && echo "app: up (pid $(cat $PIDFILE), port $PORT)" || echo "app: down"
     nginx_up && echo "nginx: up (pid $(cat /run/nginx.pid))" || echo "nginx: down"
+    snippets_included && echo "nginx: serves $SNIPPETS/*.conf" || echo "nginx: no site includes $SNIPPETS/*.conf"
     ;;
   update)
     old=$(git rev-parse HEAD)

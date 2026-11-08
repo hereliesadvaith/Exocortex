@@ -1,0 +1,9 @@
+{
+  "name": "Habits",
+  "description": "Streaks & check-ins",
+  "path": "/habits/",
+  "health": "http://127.0.0.1:8001/api/state?days=7",
+  "color": "#2f7d57",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M8 12.5l2.8 2.8L16.5 9.5'/></svg>",
+  "log": "habits.log"
+}
