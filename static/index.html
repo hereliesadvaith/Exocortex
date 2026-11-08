@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151614" media="(prefers-color-scheme: dark)">
+<title>Habits</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f7d57'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #eeede8;
+  --text: #1c1d1a;
+  --muted: #6b6d66;
+  --line: #e2e1db;
+  --accent: #2f7d57;
+  --accent-soft: #cfe5d8;
+  --accent-text: #ffffff;
+  --danger: #b4412f;
+  --empty: #e8e7e1;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151614;
+    --surface: #1e1f1c;
+    --surface-2: #292a26;
+    --text: #ecebe6;
+    --muted: #9a9b94;
+    --line: #2f302c;
+    --accent: #5cbf8a;
+    --accent-soft: #33694c;
+    --accent-text: #0f1a14;
+    --danger: #e0735f;
+    --empty: #2a2b27;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 96px; }
+
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+h1 { font-size: 28px; line-height: 1.1; margin: 0; letter-spacing: -.02em; }
+.date { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.progress { text-align: right; font-variant-numeric: tabular-nums; }
+.progress b { font-size: 22px; }
+.progress small { display: block; color: var(--muted); font-size: 12px; }
+.bar { height: 6px; border-radius: 3px; background: var(--empty); overflow: hidden; margin-bottom: 20px; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+
+.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; margin-bottom: 16px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 8px; border-radius: 9px; color: var(--muted); font-weight: 600; font-size: 14px; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.row { display: flex; align-items: center; gap: 12px; }
+.grow { flex: 1; min-width: 0; }
+.name { font-weight: 650; font-size: 17px; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.meta .streak { color: var(--accent); font-weight: 600; }
+.card.done .name { color: var(--muted); }
+
+.icon-btn { border: 0; background: transparent; color: var(--muted); width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.icon-btn:active { background: var(--surface-2); }
+
+.check { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); display: grid; place-items: center; flex: none; transition: background .15s, border-color .15s, transform .1s; }
+.check:active { transform: scale(.94); }
+.check svg { opacity: 0; transition: opacity .15s; }
+.check.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.check.on svg { opacity: 1; }
+
+.stepper { display: flex; align-items: center; background: var(--surface-2); border-radius: 24px; flex: none; }
+.stepper button { border: 0; background: transparent; width: 40px; height: 44px; font-size: 22px; line-height: 1; color: var(--text); border-radius: 22px; }
+.stepper button:active { background: var(--line); }
+.stepper .val { white-space: nowrap; min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 650; border: 0; background: transparent; padding: 0 2px; height: 44px; }
+.stepper .val small { color: var(--muted); font-weight: 500; }
+.stepper.met { background: var(--accent); color: var(--accent-text); }
+.stepper.met button, .stepper.met .val small { color: var(--accent-text); }
+
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+.day { border: 0; background: transparent; padding: 2px 0; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 11px; }
+.day .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--empty); position: relative; }
+.day.partial .dot { background: var(--accent-soft); }
+.day.met .dot { background: var(--accent); }
+.day.today { color: var(--text); font-weight: 700; }
+.day.today .dot { outline: 2px solid var(--text); outline-offset: 2px; }
+.day.note .dot::after { content: ""; position: absolute; right: -2px; top: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--text); border: 1.5px solid var(--surface); }
+
+.section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; margin: 22px 4px 10px; }
+
+.heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; margin-top: 12px; }
+.heat .c { aspect-ratio: 1; border-radius: 3px; background: var(--empty); border: 0; padding: 0; }
+.heat .c.partial { background: var(--accent-soft); }
+.heat .c.met { background: var(--accent); }
+.heat .c.before, .heat .c.future { background: transparent; pointer-events: none; }
+.heat .c.before { outline: 1px dashed var(--line); outline-offset: -1px; }
+.heat .c.today { outline: 2px solid var(--text); outline-offset: -1px; }
+.heat-wrap { display: grid; grid-template-columns: auto 1fr; gap: 6px; }
+.heat-labels { display: grid; grid-template-rows: repeat(7, 1fr); gap: 3px; margin-top: 12px; font-size: 10px; color: var(--muted); }
+.heat-labels span { display: flex; align-items: center; }
+.stats { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.stats b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; }
+
+.archived .name { color: var(--muted); }
+.link { border: 0; background: transparent; color: var(--accent); font-weight: 600; padding: 6px 4px; }
+
+.empty { text-align: center; color: var(--muted); padding: 48px 16px; }
+.empty b { display: block; color: var(--text); font-size: 18px; margin-bottom: 6px; }
+
+.fab { position: fixed; right: max(16px, calc(50% - 304px)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px rgba(0,0,0,.2); display: grid; place-items: center; }
+
+dialog { border: 0; border-radius: 20px; padding: 0; background: var(--surface); color: var(--text); width: min(420px, calc(100vw - 32px)); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog form { padding: 20px; display: grid; gap: 14px; }
+dialog h2 { margin: 0; font-size: 19px; }
+dialog .sub { color: var(--muted); font-size: 14px; margin-top: -10px; }
+label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+input, select, textarea { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; font-weight: 400; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+textarea { resize: vertical; min-height: 64px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 10px; }
+.seg label { display: block; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
+.seg span { display: block; text-align: center; padding: 8px 4px; border-radius: 7px; color: var(--muted); font-size: 14px; }
+.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); }
+.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 4px; }
+.actions .left { margin-right: auto; display: flex; gap: 4px; }
+.btn { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 650; background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: var(--accent-text); }
+.btn.danger { background: transparent; color: var(--danger); padding: 10px 8px; }
+.btn.plain { background: transparent; color: var(--muted); padding: 10px 8px; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick button { border: 1px solid var(--line); background: var(--bg); border-radius: 16px; padding: 5px 12px; font-size: 14px; }
+[hidden] { display: none !important; }
+
+.toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Habits</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="progress" id="progress"></div>
+  </header>
+  <div class="bar" id="bar" hidden><i></i></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="today" aria-selected="true">Today</button>
+    <button role="tab" data-tab="history" aria-selected="false">History</button>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<button class="fab" id="add" aria-label="New habit">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<dialog id="habitDialog">
+  <form method="dialog" id="habitForm">
+    <h2 id="habitTitle">New habit</h2>
+    <label>Name <input name="name" required maxlength="80" autocomplete="off" placeholder="e.g. Read, Walk, Water"></label>
+    <div>
+      <label style="margin-bottom:6px">Type</label>
+      <div class="seg">
+        <label><input type="radio" name="kind" value="check" checked><span>Done / not</span></label>
+        <label><input type="radio" name="kind" value="count"><span>Count</span></label>
+        <label><input type="radio" name="kind" value="minutes"><span>Minutes</span></label>
+      </div>
+    </div>
+    <div class="two">
+      <label id="targetLabel" hidden>Daily target <input name="target" type="number" min="0.01" step="any" inputmode="decimal"></label>
+      <label>Days per week
+        <select name="times_per_week">
+          <option value="7">Every day</option>
+          <option value="6">6 days</option><option value="5">5 days</option><option value="4">4 days</option>
+          <option value="3">3 days</option><option value="2">2 days</option><option value="1">1 day</option>
+        </select>
+      </label>
+    </div>
+    <div class="actions">
+      <div class="left">
+        <button type="button" class="btn plain" id="archiveBtn" hidden>Archive</button>
+        <button type="button" class="btn danger" id="deleteBtn" hidden>Delete</button>
+      </div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDialog">
+  <form method="dialog" id="logForm">
+    <h2 id="logTitle"></h2>
+    <div class="sub" id="logSub"></div>
+    <label id="logValueLabel">Value <input name="value" type="number" min="0" step="any" inputmode="decimal"></label>
+    <div class="quick" id="quick"></div>
+    <label id="logDoneLabel" style="display:flex;align-items:center;gap:10px;color:var(--text);font-size:16px;font-weight:500">
+      <input type="checkbox" name="done" style="width:22px;height:22px;accent-color:var(--accent)"> Done
+    </label>
+    <label>Note <textarea name="note" maxlength="500" placeholder="Optional"></textarea></label>
+    <div class="actions">
+      <div class="left"><button type="button" class="btn danger" id="clearLog">Clear</button></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CHECK_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const DOTS_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
+const HEAT_WEEKS = 16;
+
+// Dates are handled as "YYYY-MM-DD" strings, with arithmetic in UTC so the
+// phone's time zone never shifts a day. "Today" comes from Postgres.
+const toDate = s => new Date(s + "T00:00:00Z");
+const iso = d => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+const weekday = s => (toDate(s).getUTCDay() + 6) % 7; // Monday = 0
+const fmtDay = (s, opts) => toDate(s).toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
+
+let S = { today: null, habits: [], logs: {} };
+let tab = "today";
+try { tab = localStorage.getItem("habits.tab") || "today"; } catch {}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = res.statusText;
+    try {
+      const j = await res.json();
+      msg = typeof j.detail === "string" ? j.detail : (j.detail?.[0]?.msg || msg);
+    } catch {}
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.hidden = true, 3500);
+}
+
+async function load() {
+  try {
+    const data = await api("GET", `api/state?days=${HEAT_WEEKS * 7 + 7}`);
+    const logs = {};
+    for (const l of data.logs) (logs[l.habit_id] ||= {})[l.logged_on] = { value: Number(l.value), note: l.note };
+    data.habits.forEach(h => { h.target = h.target == null ? null : Number(h.target); });
+    S = { today: data.today, habits: data.habits, logs };
+    render();
+  } catch (e) {
+    toast("Couldn't load: " + e.message);
+  }
+}
+
+const logOf = (h, day) => S.logs[h.id]?.[day];
+const goal = h => h.kind === "check" ? 1 : h.target;
+const isMet = (h, day) => (logOf(h, day)?.value ?? 0) >= goal(h);
+const unit = h => h.kind === "minutes" ? "min" : "";
+const num = v => Number.isInteger(v) ? String(v) : String(+v.toFixed(2));
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+function streakText(h) {
+  const n = Number(h.current_streak);
+  if (!n) return "";
+  return `<span class="streak">${n}-${h.streak_unit === "days" ? "day" : "week"} streak</span>`;
+}
+
+function metaText(h) {
+  const parts = [];
+  if (h.kind !== "check") parts.push(`${num(h.target)}${h.kind === "minutes" ? " min" : ""} a day`);
+  if (h.times_per_week < 7) parts.push(`${Number(h.done_this_week)}/${h.times_per_week} this week`);
+  else if (h.kind === "check") parts.push("daily");
+  const s = streakText(h);
+  if (s) parts.push(s);
+  return parts.join(" · ");
+}
+
+function render() {
+  const active = S.habits.filter(h => h.active);
+  $("#date").textContent = S.today ? fmtDay(S.today, { weekday: "long", day: "numeric", month: "long" }) : "";
+  const done = active.filter(h => isMet(h, S.today)).length;
+  $("#progress").innerHTML = active.length ? `<b>${done}/${active.length}</b><small>done today</small>` : "";
+  $("#bar").hidden = !active.length;
+  $("#bar > i").style.width = active.length ? `${(done / active.length) * 100}%` : "0";
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  $("#main").innerHTML = tab === "today" ? renderToday(active) : renderHistory(active);
+}
+
+function renderToday(active) {
+  if (!active.length) {
+    return `<div class="empty"><b>No habits yet</b>Tap + to add your first one.</div>`;
+  }
+  // Undone first, keeping the habits' own order otherwise.
+  const sorted = [...active].sort((a, b) => isMet(a, S.today) - isMet(b, S.today));
+  return sorted.map(h => {
+    const met = isMet(h, S.today);
+    const v = logOf(h, S.today)?.value ?? 0;
+    const control = h.kind === "check"
+      ? `<button class="check ${met ? "on" : ""}" data-act="toggle" data-id="${h.id}" aria-label="${met ? "Undo" : "Mark done"}: ${esc(h.name)}" aria-pressed="${met}">${CHECK_SVG}</button>`
+      : `<div class="stepper ${met ? "met" : ""}">
+           <button data-act="step" data-id="${h.id}" data-d="-1" aria-label="Less">−</button>
+           <button class="val" data-act="log" data-id="${h.id}" data-day="${S.today}" aria-label="Edit value">${num(v)}<small>/${num(h.target)}</small></button>
+           <button data-act="step" data-id="${h.id}" data-d="1" aria-label="More">+</button>
+         </div>`;
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = addDays(S.today, -i);
+      const l = logOf(h, d);
+      const cls = [isMet(h, d) ? "met" : l ? "partial" : "", d === S.today ? "today" : "", l?.note ? "note" : ""].join(" ");
+      const label = fmtDay(d, { weekday: "long", day: "numeric", month: "short" });
+      days.push(`<button class="day ${cls}" data-act="${h.kind === "check" && d !== S.today ? "toggleDay" : "log"}" data-id="${h.id}" data-day="${d}" aria-label="${esc(label)}${l ? ": " + num(l.value) : ""}"><span class="dot"></span>${WEEK_LETTERS[weekday(d)]}</button>`);
+    }
+    return `<div class="card ${met ? "done" : ""}">
+      <div class="row">
+        <div class="grow"><div class="name">${esc(h.name)}</div><div class="meta">${metaText(h)}</div></div>
+        <button class="icon-btn" data-act="edit" data-id="${h.id}" aria-label="Edit ${esc(h.name)}">${DOTS_SVG}</button>
+        ${control}
+      </div>
+      <div class="week">${days.join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderHistory(active) {
+  const archived = S.habits.filter(h => !h.active);
+  if (!active.length && !archived.length) {
+    return `<div class="empty"><b>Nothing here yet</b>History shows up once you add habits.</div>`;
+  }
+  const start = addDays(S.today, -weekday(S.today) - (HEAT_WEEKS - 1) * 7);
+  const out = active.map(h => {
+    const cells = [];
+    let metDays = 0, window = 0;
+    for (let i = 0; i < HEAT_WEEKS * 7; i++) {
+      const d = addDays(start, i);
+      const l = logOf(h, d);
+      let cls = d > S.today ? "future" : d < h.created_on && !l ? "before" : isMet(h, d) ? "met" : l ? "partial" : "";
+      if (d === S.today) cls += " today";
+      if (d <= S.today && d > addDays(S.today, -30) && (d >= h.created_on || l)) {
+        window++;
+        if (isMet(h, d)) metDays++;
+      }
+      const label = fmtDay(d, { weekday: "short", day: "numeric", month: "short" }) + (l ? `: ${num(l.value)}${l.note ? " — " + l.note : ""}` : "");
+      cells.push(`<button class="c ${cls}" data-act="log" data-id="${h.id}" data-day="${d}" title="${esc(label)}" aria-label="${esc(label)}"></button>`);
+    }
+    const expected = h.times_per_week === 7 ? window : Math.round(window * h.times_per_week / 7);
+    const pct = expected ? Math.min(100, Math.round(metDays / expected * 100)) : 0;
+    return `<div class="card">
+      <div class="row">
+        <div class="grow"><div class="name">${esc(h.name)}</div><div class="meta">${metaText(h)}</div></div>
+        <button class="icon-btn" data-act="edit" data-id="${h.id}" aria-label="Edit ${esc(h.name)}">${DOTS_SVG}</button>
+      </div>
+      <div class="heat-wrap">
+        <div class="heat-labels">${WEEK_LETTERS.map((w, i) => `<span>${i % 2 === 0 ? w : ""}</span>`).join("")}</div>
+        <div class="heat">${cells.join("")}</div>
+      </div>
+      <div class="stats">
+        <span><b>${Number(h.current_streak)}</b> ${h.streak_unit === "days" ? "day" : "week"} streak</span>
+        ${h.times_per_week === 7 ? `<span><b>${Number(h.best_day_streak)}</b> best</span>` : ""}
+        <span><b>${pct}%</b> last 30 days</span>
+      </div>
+    </div>`;
+  });
+  if (archived.length) {
+    out.push(`<div class="section-title">Archived</div>`);
+    out.push(...archived.map(h => `<div class="card archived"><div class="row">
+      <div class="grow"><div class="name">${esc(h.name)}</div></div>
+      <button class="link" data-act="restore" data-id="${h.id}">Restore</button>
+      <button class="icon-btn" data-act="edit" data-id="${h.id}" aria-label="Edit ${esc(h.name)}">${DOTS_SVG}</button>
+    </div></div>`));
+  }
+  return out.join("");
+}
+
+// ---- mutations -------------------------------------------------------------
+
+// note: undefined keeps the day's existing note, null clears it.
+async function setLog(h, day, value, note) {
+  if (note === undefined) note = logOf(h, day)?.note ?? null;
+  // Show the change right away, then refresh streaks from the server.
+  if (value > 0) (S.logs[h.id] ||= {})[day] = { value, note };
+  else if (S.logs[h.id]) delete S.logs[h.id][day];
+  render();
+  try {
+    if (value > 0) await api("PUT", `api/logs/${h.id}/${day}`, { value, note });
+    else await api("DELETE", `api/logs/${h.id}/${day}`);
+  } catch (e) {
+    toast("Not saved: " + e.message);
+  }
+  load();
+}
+
+const habitById = id => S.habits.find(h => h.id === Number(id));
+
+$("#main").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const h = habitById(b.dataset.id);
+  if (!h) return;
+  const act = b.dataset.act;
+  if (act === "toggle" || act === "toggleDay") {
+    const day = b.dataset.day || S.today;
+    setLog(h, day, isMet(h, day) ? 0 : 1);
+  } else if (act === "step") {
+    const step = h.kind === "minutes" ? 5 : 1;
+    const v = logOf(h, S.today)?.value ?? 0;
+    const next = Math.max(0, +(v + step * Number(b.dataset.d)).toFixed(2));
+    if (next !== v) setLog(h, S.today, next);
+  } else if (act === "log") {
+    openLog(h, b.dataset.day);
+  } else if (act === "edit") {
+    openHabit(h);
+  } else if (act === "restore") {
+    saveHabit(h.id, { active: true });
+  }
+});
+
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.tab;
+  try { localStorage.setItem("habits.tab", tab); } catch {}
+  render();
+}));
+
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
+
+// ---- habit dialog ----------------------------------------------------------
+
+let editing = null;
+const hf = $("#habitForm");
+
+function syncKind() {
+  const kind = hf.kind.value;
+  $("#targetLabel").hidden = kind === "check";
+  hf.target.required = kind !== "check";
+  $("#targetLabel").firstChild.textContent = kind === "minutes" ? "Minutes a day " : "Daily target ";
+}
+hf.addEventListener("change", e => { if (e.target.name === "kind") syncKind(); });
+
+function openHabit(h) {
+  editing = h || null;
+  hf.reset();
+  $("#habitTitle").textContent = h ? "Edit habit" : "New habit";
+  if (h) {
+    hf.name.value = h.name;
+    hf.kind.value = h.kind;
+    hf.target.value = h.target ?? "";
+    hf.times_per_week.value = String(h.times_per_week);
+  }
+  $("#archiveBtn").hidden = !h;
+  $("#archiveBtn").textContent = h && !h.active ? "Restore" : "Archive";
+  $("#deleteBtn").hidden = !h;
+  syncKind();
+  $("#habitDialog").showModal();
+  if (!h) hf.name.focus();
+}
+
+async function saveHabit(id, body) {
+  try {
+    if (id) await api("PATCH", `api/habits/${id}`, body);
+    else await api("POST", "api/habits", body);
+    $("#habitDialog").close();
+    load();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+hf.addEventListener("submit", e => {
+  e.preventDefault();
+  const kind = hf.kind.value;
+  saveHabit(editing?.id, {
+    name: hf.name.value.trim(),
+    kind,
+    target: kind === "check" ? null : Number(hf.target.value),
+    times_per_week: Number(hf.times_per_week.value),
+  });
+});
+
+$("#archiveBtn").addEventListener("click", () => editing && saveHabit(editing.id, { active: !editing.active }));
+$("#deleteBtn").addEventListener("click", async () => {
+  if (!editing || !confirm(`Delete "${editing.name}" and all its history? This can't be undone. Archive keeps the history.`)) return;
+  try {
+    await api("DELETE", `api/habits/${editing.id}`);
+    $("#habitDialog").close();
+    load();
+  } catch (e) { toast(e.message); }
+});
+$("#add").addEventListener("click", () => openHabit(null));
+
+// ---- log dialog ------------------------------------------------------------
+
+let logTarget = null;
+const lf = $("#logForm");
+
+function openLog(h, day) {
+  logTarget = { h, day };
+  const l = logOf(h, day);
+  lf.reset();
+  $("#logTitle").textContent = h.name;
+  $("#logSub").textContent = fmtDay(day, { weekday: "long", day: "numeric", month: "long" })
+    + (h.kind === "check" ? "" : ` · target ${num(h.target)}${unit(h) ? " " + unit(h) : ""}`);
+  const isCheck = h.kind === "check";
+  $("#logValueLabel").hidden = isCheck;
+  $("#logDoneLabel").hidden = !isCheck;
+  $("#logValueLabel").firstChild.textContent = h.kind === "minutes" ? "Minutes " : "Count ";
+  lf.value.value = l ? num(l.value) : "";
+  lf.done.checked = isCheck ? !!l : false;
+  lf.note.value = l?.note ?? "";
+  const q = $("#quick");
+  q.hidden = isCheck;
+  q.innerHTML = isCheck ? "" : (h.kind === "minutes" ? [5, 10, 15, 30] : [1, 2, 5]).map(n => `<button type="button" data-add="${n}">+${n}</button>`).join("")
+    + `<button type="button" data-set="${h.target}">= target</button>`;
+  $("#clearLog").hidden = !l;
+  $("#logDialog").showModal();
+}
+
+$("#quick").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const cur = Number(lf.value.value) || 0;
+  lf.value.value = num(b.dataset.set != null ? Number(b.dataset.set) : cur + Number(b.dataset.add));
+});
+
+lf.addEventListener("submit", e => {
+  e.preventDefault();
+  const { h, day } = logTarget;
+  const value = h.kind === "check" ? (lf.done.checked ? 1 : 0) : Number(lf.value.value) || 0;
+  if (value <= 0 && lf.note.value.trim()) {
+    toast(h.kind === "check" ? "Tick Done to save a note" : "Enter a value to save a note");
+    return;
+  }
+  $("#logDialog").close();
+  setLog(h, day, value, lf.note.value.trim() || null);
+});
+
+$("#clearLog").addEventListener("click", () => {
+  const { h, day } = logTarget;
+  $("#logDialog").close();
+  setLog(h, day, 0);
+});
+
+// Pick up a new day (and edits from Claude) when the tab comes back into view.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+load();
+</script>
+</body>
+</html>
