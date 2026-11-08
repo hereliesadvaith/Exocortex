@@ -8,6 +8,9 @@ cd "$(dirname "$0")"
 
 PIDFILE=server.pid
 
+# proot's Debian runs on UTC; show log timestamps in local time. Override with TZ=... ./start.sh
+export TZ="${TZ:-Asia/Kolkata}"
+
 if [[ "${1:-}" == "stop" ]]; then
   if [[ -f $PIDFILE ]] && pid=$(cat $PIDFILE) && kill "$pid" 2>/dev/null; then
     # Wait for it to actually exit so a quick restart doesn't hit a busy port.
