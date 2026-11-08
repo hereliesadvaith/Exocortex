@@ -40,10 +40,13 @@ ALLOWED_USERS = {
 
 PORT = int(os.getenv("MCP_PORT", "8000"))
 
-# Uvicorn's default log format has no timestamps; prefix every line with one.
+# Uvicorn's default log format has no timestamps and pads "INFO:" to align
+# columns; prefix every line with a timestamp and use the bare level name.
 LOG_CONFIG = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
 for _formatter in LOG_CONFIG["formatters"].values():
-    _formatter["fmt"] = "%(asctime)s " + _formatter["fmt"]
+    _formatter["fmt"] = "%(asctime)s " + _formatter["fmt"].replace(
+        "%(levelprefix)s", "%(levelname)s"
+    )
     _formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
 
 
