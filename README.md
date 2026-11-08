@@ -131,7 +131,7 @@ nano .env   # or any editor
 
 ```sh
 ./start.sh          # foreground (Ctrl+C to stop)
-./start.sh -d       # background, logs to server.log
+./start.sh -d       # background, appends to server.log (rotated to server.log.1-3 at 1 MB)
 ./start.sh stop     # stop the background server
 ./start.sh restart  # stop, start in the background, wait until it answers
 ./start.sh update   # git pull, then restart; rolls back if the new code doesn't start

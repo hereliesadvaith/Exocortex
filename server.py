@@ -9,6 +9,7 @@
 # ///
 import asyncio
 import copy
+import logging
 import os
 import subprocess
 from pathlib import Path
@@ -18,6 +19,7 @@ import psycopg
 import uvicorn.config
 from dotenv import dotenv_values, load_dotenv
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.providers.github import GitHubProvider
 from psycopg.rows import dict_row
 
@@ -86,15 +88,23 @@ def query(sql: str) -> list[dict]:
     for other statements returns the affected row count. Changes are committed
     automatically. Statements are cancelled after QUERY_TIMEOUT_MS.
     """
-    with psycopg.connect(DSN, row_factory=dict_row, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            if cur.description:
-                rows = cur.fetchmany(MAX_ROWS + 1)
-                if len(rows) > MAX_ROWS:
-                    return rows[:MAX_ROWS] + [{"truncated": True, "max_rows": MAX_ROWS}]
-                return rows
-            return [{"status": cur.statusmessage, "rowcount": cur.rowcount}]
+    try:
+        with psycopg.connect(DSN, row_factory=dict_row, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                if cur.description:
+                    rows = cur.fetchmany(MAX_ROWS + 1)
+                    if len(rows) > MAX_ROWS:
+                        return rows[:MAX_ROWS] + [{"truncated": True, "max_rows": MAX_ROWS}]
+                    return rows
+                return [{"status": cur.statusmessage, "rowcount": cur.rowcount}]
+    except psycopg.Error as e:
+        # SQL errors are the caller's to fix, not server bugs: log one line instead of
+        # FastMCP's full traceback, and send the complete message back to the client.
+        message = str(e).strip() or type(e).__name__
+        first_line = message.splitlines()[0][:200]
+        print(f"query error [{e.sqlstate or type(e).__name__}]: {first_line}", flush=True)
+        raise ToolError(message, log_level=logging.DEBUG) from None
 
 
 if ENABLE_SHELL:

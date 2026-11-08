@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the exocortex FastMCP server with its ngrok tunnel.
 #   ./start.sh          run in the foreground (Ctrl+C to stop)
-#   ./start.sh -d       run in the background, logging to server.log
+#   ./start.sh -d       run in the background, appending to server.log (rotated at 1 MB)
 #   ./start.sh stop     stop a background instance
 #   ./start.sh restart  stop, then start in the background and wait until it answers
 #   ./start.sh update   git pull --ff-only, then restart; rolls back if the new code
@@ -56,12 +56,28 @@ except Exception:
 EOF
 }
 
+LOG=server.log
+LOG_MAX_BYTES=$((1024 * 1024))
+LOG_KEEP=3
+
+# Keep server.log across restarts; once it passes LOG_MAX_BYTES, shift it to
+# server.log.1 (older ones to .2 .. .LOG_KEEP, the oldest is dropped).
+rotate_log() {
+  [[ -f $LOG && $(stat -c %s $LOG) -ge $LOG_MAX_BYTES ]] || return 0
+  for ((i = LOG_KEEP - 1; i >= 1; i--)); do
+    [[ -f $LOG.$i ]] && mv -f "$LOG.$i" "$LOG.$((i + 1))"
+  done
+  mv -f $LOG $LOG.1
+}
+
 start_background() {
-  nohup .venv/bin/python server.py > server.log 2>&1 &
+  rotate_log
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting server ($(git rev-parse --short HEAD 2>/dev/null || echo unknown)) =====" >> $LOG
+  nohup .venv/bin/python server.py >> $LOG 2>&1 &
   echo $! > $PIDFILE
   for _ in $(seq 30); do
     if healthy; then
-      grep "ngrok tunnel:" server.log || true
+      grep "ngrok tunnel:" $LOG | tail -1 || true
       echo "running in background (pid $(cat $PIDFILE)). logs: tail -f server.log  stop: ./start.sh stop"
       return 0
     fi
@@ -69,7 +85,7 @@ start_background() {
     sleep 1
   done
   echo "server didn't come up, see server.log" >&2
-  tail -20 server.log >&2 || true
+  tail -20 $LOG >&2 || true
   stop_server >/dev/null
   return 1
 }
