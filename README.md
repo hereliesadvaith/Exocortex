@@ -10,7 +10,7 @@ Claude / any MCP client
                           └──────────── Debian (proot-distro) inside Termux ────────────┘
 ```
 
-The server exposes one MCP tool, `query(sql)`, which runs any SQL statement against your database. Only the GitHub usernames you allowlist can sign in.
+The server exposes one MCP tool, `query(sql)`, which runs any SQL statement against your database. Only the GitHub usernames you allowlist can sign in. Optionally it can also give the assistant a shell on the phone and let it update and restart the server itself (see [Shell and self-update](#shell-and-self-update)).
 
 ## Requirements
 
@@ -125,13 +125,16 @@ nano .env   # or any editor
 | `MCP_HOST` / `MCP_PORT` | | `127.0.0.1` / `8000` | Where the server listens |
 | `QUERY_TIMEOUT_MS` | | `15000` | Statements running longer than this are cancelled |
 | `QUERY_MAX_ROWS` | | `500` | Maximum rows returned; extra rows are cut and a `{"truncated": true}` row is added |
+| `ENABLE_SHELL` | | off | `true` adds the `shell` and `update_and_restart` tools (see below) |
 
 ## 6. Run it
 
 ```sh
-./start.sh        # foreground (Ctrl+C to stop)
-./start.sh -d     # background, logs to server.log
-./start.sh stop   # stop the background server
+./start.sh          # foreground (Ctrl+C to stop)
+./start.sh -d       # background, logs to server.log
+./start.sh stop     # stop the background server
+./start.sh restart  # stop, start in the background, wait until it answers
+./start.sh update   # git pull, then restart; rolls back if the new code doesn't start
 tail -f server.log
 ```
 
@@ -154,6 +157,23 @@ claude mcp add --transport http exocortex https://<your-ngrok-domain>/mcp
 ```
 
 Then run `/mcp` inside Claude Code to authenticate.
+
+## Shell and self-update
+
+Set `ENABLE_SHELL=true` in `.env` and restart to add two more tools:
+
+| Tool | What it does |
+|---|---|
+| `shell(command, timeout_s=60)` | Runs a bash command in the repo directory, as the user running `server.py` (root inside Debian; under PRoot that is still only the Termux app's rights). Returns the exit code and output. Every command is written to `server.log`. |
+| `update_and_restart(force_restart=False)` | Runs `./start.sh update` in the background: `git pull --ff-only` on the current branch, reinstall requirements if they changed, then restart. The connection drops for a few seconds. Without new commits it does nothing unless `force_restart` is true. Results go to `update.log`. |
+
+`./start.sh update` protects you from a bad pull:
+
+- It refuses to run if tracked files have uncommitted changes, so it never throws away local edits.
+- If the new `server.py` doesn't compile or its requirements don't install, it resets the code to the previous commit and leaves the running server alone.
+- If the new server doesn't answer on its port within 30 seconds, it resets to the previous commit and starts that again.
+
+With the shell enabled, anyone you allowlist can run commands on the phone and read `.env`. Only enable it if the allowlist is just you.
 
 ## Keeping it alive on Android
 

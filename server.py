@@ -7,19 +7,22 @@
 #   "python-dotenv",
 # ]
 # ///
+import asyncio
 import copy
 import os
+import subprocess
 from pathlib import Path
 
 import ngrok
 import psycopg
 import uvicorn.config
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.github import GitHubProvider
 from psycopg.rows import dict_row
 
-load_dotenv(Path(__file__).parent / ".env")
+HERE = Path(__file__).parent
+load_dotenv(HERE / ".env")
 
 DSN = (
     f"host={os.getenv('POSTGRES_HOST', 'localhost')} "
@@ -39,6 +42,10 @@ ALLOWED_USERS = {
 }
 
 PORT = int(os.getenv("MCP_PORT", "8000"))
+
+# Shell access to the host (as the user running server.py). Off unless enabled in .env.
+ENABLE_SHELL = os.getenv("ENABLE_SHELL", "").strip().lower() in ("1", "true", "yes")
+SHELL_MAX_OUTPUT = 50_000
 
 # Uvicorn's default log format has no timestamps and pads "INFO:" to align
 # columns; prefix every line with a timestamp and use the bare level name.
@@ -88,6 +95,84 @@ def query(sql: str) -> list[dict]:
                     return rows[:MAX_ROWS] + [{"truncated": True, "max_rows": MAX_ROWS}]
                 return rows
             return [{"status": cur.statusmessage, "rowcount": cur.rowcount}]
+
+
+if ENABLE_SHELL:
+
+    @mcp.tool
+    async def shell(command: str, timeout_s: int = 60) -> dict:
+        """Run a bash command on the server host, from the repo directory.
+
+        Runs as the user that started server.py (root inside the PRoot Debian).
+        Returns exit_code and combined stdout/stderr (last 50k characters).
+        The command is killed after timeout_s seconds (max 600).
+        Don't use it to stop or restart the server; use update_and_restart.
+        """
+        timeout_s = max(1, min(timeout_s, 600))
+        print(f"shell: {command!r}", flush=True)
+        proc = await asyncio.create_subprocess_exec(
+            "bash", "-c", command,
+            cwd=HERE,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        chunks: list[bytes] = []
+
+        async def pump():
+            while chunk := await proc.stdout.read(65536):
+                chunks.append(chunk)
+
+        reader = asyncio.create_task(pump())
+        timed_out = False
+        try:
+            await asyncio.wait_for(proc.wait(), timeout_s)
+        except asyncio.TimeoutError:
+            timed_out = True
+            try:
+                os.killpg(proc.pid, 9)
+            except ProcessLookupError:
+                pass
+            await proc.wait()
+        # A backgrounded child can keep the pipe open; don't wait on it forever.
+        try:
+            await asyncio.wait_for(reader, 2)
+        except asyncio.TimeoutError:
+            reader.cancel()
+        text = b"".join(chunks).decode(errors="replace")
+        result = {"exit_code": proc.returncode, "output": text[-SHELL_MAX_OUTPUT:]}
+        if len(text) > SHELL_MAX_OUTPUT:
+            result["truncated_chars"] = len(text) - SHELL_MAX_OUTPUT
+        if timed_out:
+            result["timed_out"] = True
+        return result
+
+    @mcp.tool
+    def update_and_restart(force_restart: bool = False) -> str:
+        """Pull the latest code (git pull --ff-only) and restart this server.
+
+        Runs `./start.sh update` in the background after this call returns, so the
+        connection drops for a few seconds. If the new code doesn't start, it rolls
+        back to the previous commit. Without new commits nothing restarts unless
+        force_restart is true. Check the outcome afterwards with: tail -30 update.log
+        """
+        # Don't hand the restarted server the values loaded from the old .env, so edits to .env apply.
+        env = {k: v for k, v in os.environ.items() if k not in dotenv_values(HERE / ".env")}
+        if force_restart:
+            env["FORCE_RESTART"] = "1"
+        print(f"update_and_restart(force_restart={force_restart})", flush=True)
+        with open(HERE / "update.log", "a") as log:
+            subprocess.Popen(
+                ["bash", "-c", "sleep 2; exec ./start.sh update"],
+                cwd=HERE,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        return "update started; reconnect in ~15s and check: tail -30 update.log"
 
 
 if __name__ == "__main__":

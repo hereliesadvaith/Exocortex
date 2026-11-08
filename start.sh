@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 # Start the exocortex FastMCP server with its ngrok tunnel.
-#   ./start.sh       run in the foreground (Ctrl+C to stop)
-#   ./start.sh -d    run in the background, logging to server.log
-#   ./start.sh stop  stop a background instance
+#   ./start.sh          run in the foreground (Ctrl+C to stop)
+#   ./start.sh -d       run in the background, logging to server.log
+#   ./start.sh stop     stop a background instance
+#   ./start.sh restart  stop, then start in the background and wait until it answers
+#   ./start.sh update   git pull --ff-only, then restart; rolls back if the new code
+#                       doesn't come up. Logs to update.log when run by the MCP tool.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 PIDFILE=server.pid
+PORT="${MCP_PORT:-$(grep -E '^MCP_PORT=' .env 2>/dev/null | cut -d= -f2 || true)}"
+PORT="${PORT:-8000}"
 
 # proot's Debian runs on UTC; show log timestamps in local time. Override with TZ=... ./start.sh
 export TZ="${TZ:-Asia/Kolkata}"
 
-if [[ "${1:-}" == "stop" ]]; then
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
+
+stop_server() {
   if [[ -f $PIDFILE ]] && pid=$(cat $PIDFILE) && kill "$pid" 2>/dev/null; then
     # Wait for it to actually exit so a quick restart doesn't hit a busy port.
     for _ in $(seq 10); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
@@ -24,34 +31,129 @@ if [[ "${1:-}" == "stop" ]]; then
     echo "not running"
   fi
   rm -f $PIDFILE
-  exit 0
-fi
+}
+
+ensure_postgres() {
+  # Postgres doesn't come back on its own after a phone restart.
+  if ! pg_lsclusters -h 2>/dev/null | grep -q " online"; then
+    echo "starting postgres..."
+    # Run as postgres: under PRoot every file looks root-owned to root, and chown is a no-op.
+    su postgres -c "pg_ctlcluster 17 main start"
+  fi
+}
+
+# True once the server process is alive and answers HTTP on its port (any status, e.g. 401).
+healthy() {
+  [[ -f $PIDFILE ]] && kill -0 "$(cat $PIDFILE)" 2>/dev/null || return 1
+  .venv/bin/python - "$PORT" <<'EOF' 2>/dev/null
+import sys, urllib.request, urllib.error
+try:
+    urllib.request.urlopen(f"http://127.0.0.1:{sys.argv[1]}/mcp", timeout=3)
+except urllib.error.HTTPError:
+    pass  # any HTTP answer means the server is up
+except Exception:
+    sys.exit(1)
+EOF
+}
+
+start_background() {
+  nohup .venv/bin/python server.py > server.log 2>&1 &
+  echo $! > $PIDFILE
+  for _ in $(seq 30); do
+    if healthy; then
+      grep "ngrok tunnel:" server.log || true
+      echo "running in background (pid $(cat $PIDFILE)). logs: tail -f server.log  stop: ./start.sh stop"
+      return 0
+    fi
+    kill -0 "$(cat $PIDFILE)" 2>/dev/null || break
+    sleep 1
+  done
+  echo "server didn't come up, see server.log" >&2
+  tail -20 server.log >&2 || true
+  stop_server >/dev/null
+  return 1
+}
+
+# Install dependencies if requirements.txt changed between two commits.
+sync_deps() {
+  if ! git diff --quiet "$1" "$2" -- requirements.txt; then
+    log "requirements.txt changed, installing"
+    .venv/bin/pip install -q -r requirements.txt
+  fi
+}
+
+update() {
+  if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+    log "refusing to update: uncommitted changes in tracked files" >&2
+    git status --short --untracked-files=no >&2
+    return 1
+  fi
+  local old new
+  old=$(git rev-parse HEAD)
+  log "pulling $(git rev-parse --abbrev-ref HEAD) (at ${old:0:7})"
+  git pull --ff-only
+  new=$(git rev-parse HEAD)
+  if [[ $old == "$new" && "${FORCE_RESTART:-}" != 1 ]]; then
+    log "already up to date, not restarting"
+    return 0
+  fi
+  [[ $old != "$new" ]] && git log --oneline "$old..$new"
+
+  if ! sync_deps "$old" "$new" || ! .venv/bin/python -m py_compile server.py; then
+    # The running server is untouched; just put the code back.
+    log "new code failed to install or compile; resetting to ${old:0:7}, server not restarted" >&2
+    git reset --hard "$old"
+    sync_deps "$new" "$old" || true
+    return 1
+  fi
+
+  stop_server
+  if start_background; then
+    log "update ok: now at ${new:0:7}"
+    return 0
+  fi
+
+  log "rolling back to ${old:0:7}" >&2
+  git reset --hard "$old"
+  sync_deps "$new" "$old" || true
+  if start_background; then
+    log "rolled back; running ${old:0:7}"
+  else
+    log "ROLLBACK FAILED: server is down, fix it on the phone" >&2
+  fi
+  return 1
+}
+
+case "${1:-}" in
+  stop)
+    stop_server
+    exit 0
+    ;;
+  restart)
+    stop_server
+    ensure_postgres
+    start_background
+    exit $?
+    ;;
+  update)
+    ensure_postgres
+    update
+    exit $?
+    ;;
+esac
 
 if [[ -f $PIDFILE ]] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
   echo "already running (pid $(cat $PIDFILE)); use ./start.sh stop first" >&2
   exit 1
 fi
 
-# Postgres doesn't come back on its own after a phone restart.
-if ! pg_lsclusters -h 2>/dev/null | grep -q " online"; then
-  echo "starting postgres..."
-  # Run as postgres: under PRoot every file looks root-owned to root, and chown is a no-op.
-  su postgres -c "pg_ctlcluster 17 main start"
-fi
+ensure_postgres
 
 # Keep Android from killing us when the screen is off (only exists in Termux).
 command -v termux-wake-lock >/dev/null && termux-wake-lock || true
 
 if [[ "${1:-}" == "-d" ]]; then
-  nohup .venv/bin/python server.py > server.log 2>&1 &
-  echo $! > $PIDFILE
-  for _ in $(seq 30); do
-    grep -q "ngrok tunnel:" server.log 2>/dev/null && break
-    kill -0 "$(cat $PIDFILE)" 2>/dev/null || { echo "server exited, see server.log" >&2; tail -5 server.log; exit 1; }
-    sleep 1
-  done
-  grep "ngrok tunnel:" server.log || echo "started (pid $!), tunnel not up yet; check server.log"
-  echo "running in background (pid $!). logs: tail -f server.log  stop: ./start.sh stop"
+  start_background
 else
   exec .venv/bin/python server.py
 fi
