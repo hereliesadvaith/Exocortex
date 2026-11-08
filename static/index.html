@@ -64,13 +64,15 @@ h1 { font-size: 28px; line-height: 1.1; margin: 0; letter-spacing: -.02em; }
 .summary b { display: block; font-size: 22px; color: var(--text); }
 .summary .late { color: var(--danger); font-weight: 600; }
 
-.add { display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 6px 6px 14px; box-shadow: var(--shadow); align-items: center; }
-.add:focus-within { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-.add input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 8px 0; font-size: 16px; outline: none; }
-.add .go { border: 0; background: var(--accent); color: var(--accent-text); width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; }
-.add .go:disabled { opacity: .35; }
-.add .more { border: 0; background: transparent; color: var(--muted); width: 36px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; }
-.add-hint { color: var(--muted); font-size: 12px; margin: 6px 4px 14px; min-height: 17px; }
+.search { position: relative; margin-bottom: 14px; }
+.search .mag { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input { padding: 12px 44px 12px 42px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); -webkit-appearance: none; appearance: none; }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+.tabs.dim { opacity: .45; }
+
+.fab { position: fixed; right: max(16px, calc(50% - 304px)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: grid; place-items: center; z-index: 5; }
+.fab:active { transform: scale(.95); }
 
 .tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; margin-bottom: 10px; }
 .tabs button { flex: 1; border: 0; background: transparent; padding: 8px 4px; border-radius: 9px; color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
@@ -138,7 +140,7 @@ textarea { resize: vertical; min-height: 72px; }
 .btn.danger { background: transparent; color: var(--danger); padding: 10px 8px; }
 [hidden] { display: none !important; }
 
-.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 6px 6px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 6px 6px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .toast button { border: 0; background: transparent; color: var(--accent-soft); font-weight: 700; padding: 8px 10px; border-radius: 8px; }
 @media (prefers-color-scheme: dark) { .toast button { color: var(--accent-text); } }
 </style>
@@ -153,16 +155,13 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="summary" id="summary"></div>
   </header>
 
-  <form class="add" id="addForm" autocomplete="off">
-    <input id="addInput" maxlength="300" placeholder="Add a task" aria-label="New task" enterkeyhint="done">
-    <button type="button" class="more" id="addMore" aria-label="Add with details">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg>
+  <div class="search" role="search">
+    <svg class="mag" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off" enterkeyhint="search">
+    <button type="button" class="clear" id="qClear" aria-label="Clear search" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
-    <button type="submit" class="go" id="addGo" aria-label="Add task" disabled>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
-  </form>
-  <div class="add-hint" id="addHint"></div>
+  </div>
 
   <div class="tabs" role="tablist" id="tabs">
     <button role="tab" data-tab="today">Today</button>
@@ -175,6 +174,10 @@ textarea { resize: vertical; min-height: 72px; }
 
   <main id="main"></main>
 </div>
+
+<button class="fab" id="add" aria-label="New task">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
 
 <dialog id="taskDialog">
   <form method="dialog" id="taskForm">
@@ -252,7 +255,7 @@ const weekday = s => (toDate(s).getUTCDay() + 6) % 7; // Monday = 0
 const fmtDay = (s, opts) => toDate(s).toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
 
 let S = { today: null, lists: [], tasks: [] };
-let tab = "today", list = "all";   // list: "all", "inbox" or a list id
+let tab = "today", list = "all", query = "";   // list: "all", "inbox" or a list id
 try { tab = localStorage.getItem("todos.tab") || tab; list = localStorage.getItem("todos.list") || list; } catch {}
 const remember = () => { try { localStorage.setItem("todos.tab", tab); localStorage.setItem("todos.list", list); } catch {} };
 
@@ -372,8 +375,19 @@ function render() {
     + S.lists.map(l => chip(String(l.id), l.name, all.filter(x => x.list_id === l.id).length)).join("")
     + `<button class="new" data-list="new" aria-label="New list">+ List</button>`;
 
-  $("#main").innerHTML = ({ today: renderToday, upcoming: renderUpcoming, all: renderAll, done: renderDone })[tab](scoped);
-  renderHint();
+  $("#tabs").classList.toggle("dim", !!query);
+  $("#main").innerHTML = query ? renderSearch() : ({ today: renderToday, upcoming: renderUpcoming, all: renderAll, done: renderDone })[tab](scoped);
+}
+
+// Every word has to appear in the title or notes; searches all tabs within the picked list.
+function renderSearch() {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = x => { const text = `${x.title} ${x.notes || ""}`.toLowerCase(); return words.every(w => text.includes(w)); };
+  const found = S.tasks.filter(x => inList(x) && hit(x));
+  if (!found.length) return empty("No matches", `Nothing ${list === "all" ? "" : "in this list "}matches “${query}”.`);
+  const openOnes = found.filter(x => !x.done_at).sort(byDue);
+  const doneOnes = found.filter(x => x.done_at).sort((a, b) => a.done_at < b.done_at ? 1 : -1);
+  return group("Open", openOnes) + group("Done", doneOnes);
 }
 
 function renderToday(tasks) {
@@ -382,7 +396,7 @@ function renderToday(tasks) {
   const today = tasks.filter(x => x.due_on === t).sort(byDue);
   if (!late.length && !today.length) {
     const rest = tasks.length;
-    return empty("Nothing due today", rest ? `${rest} other open task${rest === 1 ? "" : "s"} under All.` : "Add a task above.");
+    return empty("Nothing due today", rest ? `${rest} other open task${rest === 1 ? "" : "s"} under All.` : "Tap + to add one.");
   }
   return group("Overdue", late, "late") + group("Today", today);
 }
@@ -397,7 +411,7 @@ function renderUpcoming(tasks) {
 }
 
 function renderAll(tasks) {
-  if (!tasks.length) return empty("All clear", "No open tasks here. Add one above.");
+  if (!tasks.length) return empty("All clear", "No open tasks here. Tap + to add one.");
   const sorted = [...tasks].sort(byDue);
   if (list !== "all") return group("", sorted);
   const out = [group("Inbox", sorted.filter(x => x.list_id == null))];
@@ -418,45 +432,32 @@ function renderDone() {
   }).join("");
 }
 
-// ---- quick add -----------------------------------------------------------
+// ---- search and add ------------------------------------------------------
 
-// What a quick-added task gets from where you are: Today adds for today,
-// Upcoming for tomorrow, and a picked list puts it in that list.
-function quickDefaults() {
+$("#q").addEventListener("input", e => {
+  query = e.target.value.trim();
+  $("#qClear").hidden = !e.target.value;
+  render();
+});
+$("#q").addEventListener("keydown", e => {
+  if (e.key === "Escape") clearSearch();
+  if (e.key === "Enter") e.target.blur();
+});
+function clearSearch() {
+  $("#q").value = ""; query = ""; $("#qClear").hidden = true; render();
+}
+$("#qClear").addEventListener("click", () => { clearSearch(); $("#q").focus(); });
+
+// A new task starts from where you are: Today makes it due today, Upcoming
+// tomorrow, and a picked list puts it in that list.
+function newTaskDefaults() {
   return {
-    due_on: tab === "today" ? S.today : tab === "upcoming" ? addDays(S.today, 1) : null,
+    due_on: query ? null : tab === "today" ? S.today : tab === "upcoming" ? addDays(S.today, 1) : null,
     list_id: list === "all" || list === "inbox" ? null : Number(list),
   };
 }
 
-function renderHint() {
-  if (!S.today) return;
-  const d = quickDefaults();
-  const parts = [d.due_on ? `due ${dayLabel(d.due_on).toLowerCase()}` : "no due date", d.list_id ? `in ${listName(d.list_id)}` : "in Inbox"];
-  $("#addHint").textContent = "Adds " + parts.join(", ");
-}
-
-$("#addInput").addEventListener("input", e => { $("#addGo").disabled = !e.target.value.trim(); });
-
-$("#addForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const title = $("#addInput").value.trim();
-  if (!title) return;
-  $("#addInput").value = "";
-  $("#addGo").disabled = true;
-  try {
-    await api("POST", "api/tasks", { title, ...quickDefaults() });
-    load();
-  } catch (err) {
-    $("#addInput").value = title;
-    $("#addGo").disabled = false;
-    toast("Not added: " + err.message);
-  }
-});
-
-$("#addMore").addEventListener("click", () => {
-  openTask(null, { title: $("#addInput").value.trim(), ...quickDefaults() });
-});
+$("#add").addEventListener("click", () => openTask(null, newTaskDefaults()));
 
 // ---- task actions --------------------------------------------------------
 
@@ -502,7 +503,9 @@ async function clearDone() {
 }
 
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => {
-  tab = b.dataset.tab; remember(); render();
+  tab = b.dataset.tab; remember();
+  if (query) { $("#q").value = ""; query = ""; $("#qClear").hidden = true; }
+  render();
 }));
 
 $("#chips").addEventListener("click", e => {
@@ -559,11 +562,7 @@ tf.addEventListener("submit", async e => {
   if (body.repeat && !body.due_on) return toast("A repeating task needs a due date");
   try {
     if (editing) await api("PATCH", `api/tasks/${editing.id}`, body);
-    else {
-      await api("POST", "api/tasks", body);
-      $("#addInput").value = "";
-      $("#addGo").disabled = true;
-    }
+    else await api("POST", "api/tasks", body);
     $("#taskDialog").close();
     load();
   } catch (err) {

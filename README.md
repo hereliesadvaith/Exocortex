@@ -11,7 +11,8 @@ It runs on its own, from its own directory, with its own virtualenv, settings an
 ## The page
 
 - **Today**: overdue tasks and tasks due today. **Upcoming**: dated tasks after today, by day. **All**: every open task, by list. **Done**: what you ticked off in the last 30 days.
-- The box at the top adds a task in one line. It takes its due date from the tab you're on (Today → today, Upcoming → tomorrow) and its list from the list you've picked; the line under the box says which. The sliders button opens the full form.
+- The search bar at the top finds tasks by words in their title or notes, open and done, within the list you've picked. ✕ or Esc clears it.
+- The + button at the bottom right adds a task. The form starts with the due date of the tab you're on (Today → today, Upcoming → tomorrow) and the list you've picked.
 - Tap a task to edit it; tap the circle to tick it off (Undo in the toast). The circle's colour is the priority.
 - Lists: the chips under the tabs filter by list; **+ List** adds one, tapping the selected list renames or deletes it (its tasks move to the Inbox).
 - A repeating task needs a due date. Ticking it off schedules the next one after today, on the same weekday or day of the month.
