@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141517" media="(prefers-color-scheme: dark)">
+<title>Jobs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8621b'/%3E%3Crect x='7' y='11' width='18' height='13' rx='2.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M12.5 11V9.5a2 2 0 012-2h3a2 2 0 012 2V11' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f5f5f2;
+  --surface: #ffffff;
+  --surface-2: #ecece8;
+  --text: #1b1c1e;
+  --muted: #6a6c70;
+  --line: #e0e0db;
+  --accent: #b8621b;
+  --accent-soft: #f6e4d4;
+  --accent-text: #ffffff;
+  --danger: #c0392b;
+  --ok: #2f8a4f;
+  --warn: #b7791f;
+  --s-wishlist: #8a8d93;
+  --s-applied: #3f7fd1;
+  --s-screening: #1f8f8a;
+  --s-interviewing: #7b55c7;
+  --s-offer: #2f8a4f;
+  --s-accepted: #1f7a3f;
+  --s-rejected: #c0392b;
+  --s-withdrawn: #8a8d93;
+  --s-ghosted: #9a7b5f;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141517;
+    --surface: #1d1e21;
+    --surface-2: #28292d;
+    --text: #ebebee;
+    --muted: #9a9ba1;
+    --line: #2e2f33;
+    --accent: #e89a55;
+    --accent-soft: #4a3220;
+    --accent-text: #1f1206;
+    --danger: #ec7a6c;
+    --ok: #5fc27f;
+    --warn: #e0a84c;
+    --s-wishlist: #9a9ba1;
+    --s-applied: #6ea6ec;
+    --s-screening: #4fc4be;
+    --s-interviewing: #a98be8;
+    --s-offer: #5fc27f;
+    --s-accepted: #5fc27f;
+    --s-rejected: #ec7a6c;
+    --s-withdrawn: #9a9ba1;
+    --s-ghosted: #c4a283;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 96px; }
+
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+h1 { font-size: 28px; line-height: 1.1; margin: 0; letter-spacing: -.02em; }
+.sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.notice { border: 0; background: var(--accent-soft); border-radius: 14px; padding: 8px 12px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.25; }
+.notice b { display: block; font-size: 20px; color: var(--text); }
+.notice.set { background: var(--surface-2); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); }
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat.hot b { color: var(--s-offer); }
+
+.search { position: relative; margin-bottom: 14px; }
+.search .mag { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input { padding: 12px 44px 12px 42px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); -webkit-appearance: none; appearance: none; }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+
+.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; margin-bottom: 6px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 8px 4px; border-radius: 9px; color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tabs .n { font-weight: 500; font-size: 12px; margin-left: 3px; opacity: .8; font-variant-numeric: tabular-nums; }
+.tabs.dim { opacity: .45; }
+
+.section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; margin: 18px 4px 8px; }
+.section-title i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.section-title.late { color: var(--warn); }
+
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.card { display: block; width: 100%; border: 0; background: transparent; text-align: left; padding: 12px 14px; }
+.card + .card { border-top: 1px solid var(--line); }
+.card .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.card .co { font-weight: 650; overflow-wrap: anywhere; }
+.card .role { font-size: 14px; overflow-wrap: anywhere; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--muted); font-size: 13px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.card .meta span { display: inline-flex; align-items: center; gap: 3px; }
+.card .next { margin-top: 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.card .next .when { font-weight: 600; color: var(--accent); }
+.card .next.wait .when, .card .next.stale .when { color: var(--warn); }
+.dots { display: inline-flex; gap: 3px; margin-left: auto; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--muted); }
+.dots i.passed { background: var(--ok); border-color: var(--ok); }
+.dots i.failed { background: var(--danger); border-color: var(--danger); }
+.dots i.cancelled { opacity: .35; }
+
+.badge { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 10px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); white-space: nowrap; }
+
+.slot { display: flex; gap: 12px; width: 100%; border: 0; background: transparent; text-align: left; padding: 11px 14px; align-items: flex-start; }
+.slot + .slot { border-top: 1px solid var(--line); }
+.slot .time { flex: none; width: 66px; white-space: nowrap; font-weight: 650; font-variant-numeric: tabular-nums; padding-top: 1px; }
+.slot .what { flex: 1; min-width: 0; }
+.slot .what b { font-weight: 650; }
+.slot .what div { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+.empty { text-align: center; color: var(--muted); padding: 44px 16px; }
+.empty b { display: block; color: var(--text); font-size: 18px; margin-bottom: 6px; }
+
+.fab { position: fixed; right: max(16px, calc(50% - 304px)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: grid; place-items: center; z-index: 5; }
+.fab:active { transform: scale(.95); }
+
+dialog { border: 0; border-radius: 20px; padding: 0; background: var(--surface); color: var(--text); width: min(460px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog form { padding: 20px; display: grid; gap: 14px; }
+dialog h2 { margin: 0; font-size: 19px; outline: none; }
+label, .label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 0; }
+input, select, textarea { width: 100%; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; font-weight: 400; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+textarea { resize: vertical; min-height: 72px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 10px; }
+.seg label { display: block; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
+.seg span { display: flex; align-items: center; justify-content: center; padding: 8px 2px; border-radius: 7px; color: var(--muted); font-size: 13px; font-weight: 500; }
+.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); }
+.statuses { display: flex; flex-wrap: wrap; gap: 6px; }
+.statuses label { display: block; }
+.statuses input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
+.statuses span { display: inline-block; border: 1px solid var(--line); border-radius: 16px; padding: 5px 11px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.statuses input:checked + span { color: var(--c); border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.statuses input:focus-visible + span { outline: 2px solid var(--accent); }
+
+.rounds { display: grid; gap: 6px; }
+.rounds .head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600; }
+.rounds .r { display: flex; gap: 10px; align-items: center; width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 9px 10px; text-align: left; font-size: 14px; }
+.rounds .r .what { flex: 1; min-width: 0; }
+.rounds .r .what div { font-size: 12px; color: var(--muted); }
+.rounds .none { font-size: 13px; color: var(--muted); }
+.link { border: 0; background: transparent; color: var(--accent); font-weight: 650; padding: 4px; font-size: 14px; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 4px; }
+.actions .left { margin-right: auto; }
+.btn { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 650; background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: var(--accent-text); }
+.btn.danger { background: transparent; color: var(--danger); padding: 10px 8px; }
+.hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; }
+[hidden] { display: none !important; }
+
+.toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 6px 6px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: flex; align-items: center; gap: 12px; min-height: 44px; z-index: 10; }
+.toast button { border: 0; background: transparent; color: var(--accent-soft); font-weight: 700; padding: 8px 10px; border-radius: 8px; }
+@media (prefers-color-scheme: dark) { .toast button { color: var(--accent-text); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Jobs</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <button class="notice" id="notice" aria-label="Edit profile and notice period"></button>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="search" role="search">
+    <svg class="mag" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search companies, roles, notes" aria-label="Search applications" autocomplete="off" enterkeyhint="search">
+    <button type="button" class="clear" id="qClear" aria-label="Clear search" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="pipeline">Pipeline</button>
+    <button role="tab" data-tab="upcoming">Interviews</button>
+    <button role="tab" data-tab="closed">Closed</button>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<button class="fab" id="add" aria-label="New application">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<dialog id="appDialog">
+  <form method="dialog" id="appForm">
+    <h2 id="appHead" tabindex="-1" autofocus>New application</h2>
+    <label>Company <input name="company" required maxlength="120" autocomplete="off" placeholder="Company name"></label>
+    <label>Role <input name="role" required maxlength="160" autocomplete="off" placeholder="e.g. Odoo Developer"></label>
+    <div class="label">Status <div class="statuses" id="statuses"></div></div>
+    <div class="rounds" id="roundsBox">
+      <div class="head"><span>Interview rounds</span><button type="button" class="link" id="addRound">+ Add round</button></div>
+      <div id="roundsList"></div>
+    </div>
+    <div class="two">
+      <label>Location <input name="location" maxlength="120" autocomplete="off" placeholder="City"></label>
+      <label>Work mode
+        <select name="work_mode"><option value="">—</option><option value="remote">Remote</option><option value="hybrid">Hybrid</option><option value="onsite">On-site</option></select>
+      </label>
+    </div>
+    <div class="two">
+      <label>Source <input name="source" maxlength="60" list="sources" autocomplete="off" placeholder="LinkedIn, Naukri…"></label>
+      <label>Applied on <input name="applied_on" type="date"></label>
+    </div>
+    <div class="two">
+      <label>Expected (LPA) <input name="expected_ctc" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>Offered (LPA) <input name="offered_ctc" type="number" inputmode="decimal" min="0" step="0.1"></label>
+    </div>
+    <label>Contact <input name="contact" maxlength="300" autocomplete="off" placeholder="Recruiter, phone, email"></label>
+    <label><span>Job link <a class="open" id="openUrl" target="_blank" rel="noopener noreferrer" hidden>Open ↗</a></span><input name="url" type="url" maxlength="1000" autocomplete="off" placeholder="https://"></label>
+    <label>Notes <textarea name="notes" maxlength="10000" placeholder="Stack, team, questions to ask…"></textarea></label>
+    <div class="actions">
+      <div class="left"><button type="button" class="btn danger" id="deleteApp" hidden>Delete</button></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+<datalist id="sources"><option>LinkedIn</option><option>Naukri</option><option>Instahyre</option><option>Referral</option><option>Recruiter</option><option>Company site</option><option>Odoo partner list</option></datalist>
+
+<dialog id="roundDialog">
+  <form method="dialog" id="roundForm">
+    <h2 id="roundHead" tabindex="-1" autofocus>New round</h2>
+    <div class="two">
+      <label>Round <select name="kind"></select></label>
+      <label>Mode
+        <select name="mode"><option value="">—</option><option value="video">Video</option><option value="phone">Phone</option><option value="onsite">In person</option></select>
+      </label>
+    </div>
+    <label>When <input name="scheduled_at" type="datetime-local"></label>
+    <div class="label">Result
+      <div class="seg">
+        <label><input type="radio" name="outcome" value="scheduled" checked><span>Pending</span></label>
+        <label><input type="radio" name="outcome" value="passed"><span>Passed</span></label>
+        <label><input type="radio" name="outcome" value="failed"><span>Failed</span></label>
+        <label><input type="radio" name="outcome" value="cancelled"><span>Cancelled</span></label>
+      </div>
+    </div>
+    <label>Interviewer <input name="interviewer" maxlength="200" autocomplete="off" placeholder="Optional"></label>
+    <label>Notes <textarea name="notes" maxlength="10000" placeholder="Topics, questions asked, how it went"></textarea></label>
+    <div class="actions">
+      <div class="left"><button type="button" class="btn danger" id="deleteRound" hidden>Delete</button></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="profileDialog">
+  <form method="dialog" id="profileForm">
+    <h2 tabindex="-1" autofocus>Profile</h2>
+    <label>Headline <input name="headline" required maxlength="120" autocomplete="off" placeholder="e.g. Odoo Developer"></label>
+    <div class="two">
+      <label>Experience (years) <input name="experience_years" type="number" inputmode="decimal" min="0" max="60" step="0.5"></label>
+      <label>Notice ends <input name="notice_ends_on" type="date"></label>
+    </div>
+    <div class="two">
+      <label>Current CTC (LPA) <input name="current_ctc" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>Expected (LPA) <input name="expected_ctc" type="number" inputmode="decimal" min="0" step="0.1"></label>
+    </div>
+    <label>Notes <textarea name="notes" maxlength="5000" placeholder="Skills, what you're looking for"></textarea></label>
+    <div class="actions">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const STATUS = {
+  wishlist: "Wishlist", applied: "Applied", screening: "Screening", interviewing: "Interviewing",
+  offer: "Offer", accepted: "Accepted", rejected: "Rejected", withdrawn: "Withdrawn", ghosted: "Ghosted",
+};
+const OPEN = ["offer", "interviewing", "screening", "applied", "wishlist"];
+const CLOSED = ["accepted", "rejected", "withdrawn", "ghosted"];
+const KIND = {
+  hr: "HR call", technical: "Technical", assignment: "Assignment", manager: "Manager",
+  client: "Client", culture: "Culture fit", final: "Final / HR", other: "Other",
+};
+const MODE = { video: "Video", phone: "Phone", onsite: "In person" };
+const WORK = { remote: "Remote", hybrid: "Hybrid", onsite: "On-site" };
+const OUTCOME = { scheduled: "Pending", passed: "Passed", failed: "Failed", cancelled: "Cancelled" };
+const STALE_DAYS = 7;   // "applied" with no reply for this long gets a nudge
+
+const I_PIN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>';
+const I_CLOCK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+
+// Day keys are "YYYY-MM-DD". "today" comes from Postgres (Asia/Kolkata); round times
+// are real instants shown in the phone's own time zone.
+const toDate = s => new Date(s + "T00:00:00Z");
+const iso = d => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
+const fmtDay = (s, opts) => toDate(s).toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
+const pad = n => String(n).padStart(2, "0");
+const localKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fmtTime = d => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const toLocalInput = d => `${localKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const lpa = n => n == null ? "" : `₹${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} LPA`;
+
+let S = { today: null, profile: null, applications: [], rounds: [] };
+let tab = "pipeline", query = "";
+try { tab = localStorage.getItem("jobs.tab") || tab; } catch {}
+if (!["pipeline", "upcoming", "closed"].includes(tab)) tab = "pipeline";
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = res.statusText;
+    try {
+      const j = await res.json();
+      msg = typeof j.detail === "string" ? j.detail : (j.detail?.[0]?.msg || msg);
+    } catch {}
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+let toastTimer, toastAction = null;
+function toast(msg, actionLabel, action) {
+  $("#toastMsg").textContent = msg;
+  $("#toastAct").hidden = !actionLabel;
+  $("#toastAct").textContent = actionLabel || "";
+  toastAction = action || null;
+  $("#toast").hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $("#toast").hidden = true; toastAction = null; }, actionLabel ? 5000 : 3500);
+}
+$("#toastAct").addEventListener("click", () => {
+  const a = toastAction;
+  $("#toast").hidden = true; toastAction = null;
+  if (a) a();
+});
+
+async function load() {
+  try {
+    S = await api("GET", "api/state");
+    render();
+    if ($("#appDialog").open && editing) {
+      editing = S.applications.find(a => a.id === editing.id) || editing;
+      renderRounds();
+    }
+  } catch (e) {
+    toast("Couldn't load: " + e.message);
+  }
+}
+
+// ---- helpers -------------------------------------------------------------
+
+const roundsOf = id => S.rounds.filter(r => r.application_id === id);
+const appById = id => S.applications.find(a => a.id === Number(id));
+const now = () => new Date();
+
+function dayLabel(d, { long = false } = {}) {
+  const t = S.today;
+  if (d === t) return "Today";
+  if (d === addDays(t, 1)) return "Tomorrow";
+  if (d === addDays(t, -1)) return "Yesterday";
+  if (d > t && d <= addDays(t, 6)) return fmtDay(d, { weekday: long ? "long" : "short" });
+  const sameYear = d.slice(0, 4) === t.slice(0, 4);
+  return fmtDay(d, { weekday: "short", day: "numeric", month: "short", year: sameYear ? undefined : "numeric" });
+}
+
+function whenLabel(ts) {
+  const d = new Date(ts);
+  return `${dayLabel(localKey(d))} ${fmtTime(d)}`;
+}
+
+function ago(days) {
+  if (days <= 0) return "today";
+  if (days === 1) return "1 day";
+  if (days < 14) return `${days} days`;
+  if (days < 60) return `${Math.round(days / 7)} weeks`;
+  return `${Math.round(days / 30)} months`;
+}
+
+const agoDay = d => { const n = daysBetween(d, S.today); return n <= 0 ? "today" : n === 1 ? "yesterday" : `${ago(n)} ago`; };
+const daysIn = a => daysBetween(localKey(new Date(a.status_changed_at)), S.today);
+const badge = s => `<span class="badge" style="--c:var(--s-${s})">${STATUS[s]}</span>`;
+
+// The thing to look at next on an application: an upcoming round, a round
+// waiting for its result, or a nudge when an application has gone quiet.
+function nextUp(a) {
+  const rs = roundsOf(a.id).filter(r => r.outcome === "scheduled" && r.scheduled_at);
+  const t = now();
+  const upcoming = rs.filter(r => new Date(r.scheduled_at) >= t).sort((x, y) => x.scheduled_at < y.scheduled_at ? -1 : 1)[0];
+  const waiting = rs.filter(r => new Date(r.scheduled_at) < t).sort((x, y) => x.scheduled_at < y.scheduled_at ? 1 : -1)[0];
+  if (waiting) return { cls: "wait", html: `${I_CLOCK}<span class="when">Waiting to hear</span> · ${esc(KIND[waiting.kind])} ${agoDay(localKey(new Date(waiting.scheduled_at)))}` };
+  if (upcoming) return { cls: "", html: `${I_CLOCK}<span class="when">${esc(whenLabel(upcoming.scheduled_at))}</span> ${esc(KIND[upcoming.kind])}${upcoming.mode ? ` · ${MODE[upcoming.mode]}` : ""}` };
+  if (a.status === "applied" && daysIn(a) >= STALE_DAYS) return { cls: "stale", html: `${I_CLOCK}<span class="when">No reply for ${ago(daysIn(a))}</span> · follow up?` };
+  if (a.status === "offer" && a.offered_ctc != null) return { cls: "", html: `Offered <span class="when">${esc(lpa(a.offered_ctc))}</span>` };
+  return null;
+}
+
+function card(a) {
+  const meta = [];
+  const where = [a.location, WORK[a.work_mode]].filter(Boolean).join(" · ");
+  if (where) meta.push(`<span>${I_PIN}${esc(where)}</span>`);
+  if (a.source) meta.push(`<span>${esc(a.source)}</span>`);
+  if (a.expected_ctc != null && a.status !== "offer") meta.push(`<span>${esc(lpa(a.expected_ctc))}</span>`);
+  if (OPEN.includes(a.status) && a.status !== "wishlist") meta.push(`<span>${daysIn(a) > 0 ? `for ${ago(daysIn(a))}` : "since today"}</span>`);
+  if (CLOSED.includes(a.status)) meta.push(`<span>${esc(dayLabel(localKey(new Date(a.status_changed_at))))}</span>`);
+  const rs = roundsOf(a.id);
+  const dots = rs.length ? `<span class="dots" aria-label="${rs.filter(r => r.outcome === "passed").length} of ${rs.length} rounds passed">${rs.map(r => `<i class="${r.outcome}" title="${esc(KIND[r.kind])}: ${OUTCOME[r.outcome]}"></i>`).join("")}</span>` : "";
+  const n = OPEN.includes(a.status) ? nextUp(a) : null;
+  return `<button class="card" data-id="${a.id}">
+    <div class="top"><span class="co">${esc(a.company)}</span>${badge(a.status)}</div>
+    <div class="role">${esc(a.role)}</div>
+    ${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}
+    ${n || dots ? `<div class="next ${n ? n.cls : ""}">${n ? n.html : ""}${dots}</div>` : ""}
+  </button>`;
+}
+
+const section = (title, items, color, cls = "") => !items.length ? "" :
+  `<div class="section-title ${cls}">${color ? `<i style="background:${color}"></i>` : ""}<span>${esc(title)} · ${items.length}</span></div><div class="group">${items.join("")}</div>`;
+
+const empty = (head, text) => `<div class="empty"><b>${esc(head)}</b>${esc(text)}</div>`;
+
+// ---- render --------------------------------------------------------------
+
+function render() {
+  const p = S.profile || {};
+  const t = S.today;
+  const sub = [p.headline, p.experience_years != null ? `${p.experience_years} yrs` : null].filter(Boolean).join(" · ");
+  $("#sub").textContent = sub;
+
+  const notice = $("#notice");
+  if (p.notice_ends_on) {
+    const left = daysBetween(t, p.notice_ends_on);
+    notice.classList.remove("set");
+    notice.innerHTML = left > 0
+      ? `<b>${left} day${left === 1 ? "" : "s"}</b>notice ends ${esc(fmtDay(p.notice_ends_on, { day: "numeric", month: "short" }))}`
+      : left === 0 ? `<b>Last day</b>of notice` : `<b>Free</b>since ${esc(fmtDay(addDays(p.notice_ends_on, 1), { day: "numeric", month: "short" }))}`;
+  } else {
+    notice.classList.add("set");
+    notice.innerHTML = `<b>—</b>set notice date`;
+  }
+
+  const active = S.applications.filter(a => OPEN.includes(a.status) && a.status !== "wishlist");
+  const weekEnd = addDays(t, 7);
+  const soon = S.rounds.filter(r => r.outcome === "scheduled" && r.scheduled_at && new Date(r.scheduled_at) >= now()
+    && localKey(new Date(r.scheduled_at)) < weekEnd);
+  const offers = S.applications.filter(a => a.status === "offer" || a.status === "accepted");
+  $("#stats").innerHTML = `
+    <div class="stat"><b>${active.length}</b><span>active</span></div>
+    <div class="stat"><b>${soon.length}</b><span>this week</span></div>
+    <div class="stat ${offers.length ? "hot" : ""}"><b>${offers.length}</b><span>offer${offers.length === 1 ? "" : "s"}</span></div>`;
+
+  const counts = {
+    pipeline: S.applications.filter(a => OPEN.includes(a.status)).length,
+    upcoming: S.rounds.filter(r => r.outcome === "scheduled" && r.scheduled_at && OPEN.includes(appById(r.application_id)?.status)).length,
+    closed: S.applications.filter(a => CLOSED.includes(a.status)).length,
+  };
+  const names = { pipeline: "Pipeline", upcoming: "Interviews", closed: "Closed" };
+  document.querySelectorAll("#tabs button").forEach(b => {
+    b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    const n = counts[b.dataset.tab];
+    b.innerHTML = `${names[b.dataset.tab]}${n ? `<span class="n">${n}</span>` : ""}`;
+  });
+
+  $("#tabs").classList.toggle("dim", !!query);
+  $("#main").innerHTML = query ? renderSearch() : ({ pipeline: renderPipeline, upcoming: renderUpcoming, closed: renderClosed })[tab]();
+}
+
+const byStage = (a, b) => {
+  const na = nextAt(a), nb = nextAt(b);
+  if (na !== nb) return na < nb ? -1 : 1;
+  return a.status_changed_at < b.status_changed_at ? 1 : -1;
+};
+function nextAt(a) {
+  const t = now();
+  const r = roundsOf(a.id).filter(r => r.outcome === "scheduled" && r.scheduled_at && new Date(r.scheduled_at) >= t)
+    .sort((x, y) => x.scheduled_at < y.scheduled_at ? -1 : 1)[0];
+  return r ? r.scheduled_at : "9999";
+}
+
+function renderPipeline() {
+  const out = OPEN.map(s => section(STATUS[s], S.applications.filter(a => a.status === s).sort(byStage).map(card), `var(--s-${s})`)).join("");
+  return out || empty("No applications yet", "Tap + to add the first one.");
+}
+
+function renderClosed() {
+  const out = CLOSED.map(s => section(STATUS[s],
+    S.applications.filter(a => a.status === s).sort((a, b) => a.status_changed_at < b.status_changed_at ? 1 : -1).map(card),
+    `var(--s-${s})`)).join("");
+  return out || empty("Nothing closed", "Rejected, withdrawn, ghosted and accepted applications end up here.");
+}
+
+function slot(r, { showDay = false } = {}) {
+  const a = appById(r.application_id);
+  const d = new Date(r.scheduled_at);
+  const bits = [MODE[r.mode], r.interviewer].filter(Boolean).join(" · ");
+  return `<button class="slot" data-round="${r.id}">
+    <div class="time">${showDay ? esc(fmtDay(localKey(d), { day: "numeric", month: "short" })) : esc(fmtTime(d))}</div>
+    <div class="what"><b>${esc(KIND[r.kind])}</b> · ${esc(a?.company || "")}
+      <div>${esc(a?.role || "")}${bits ? ` · ${esc(bits)}` : ""}</div>
+    </div>
+  </button>`;
+}
+
+function renderUpcoming() {
+  const t = now();
+  const live = S.rounds.filter(r => r.outcome === "scheduled" && r.scheduled_at && OPEN.includes(appById(r.application_id)?.status));
+  const waiting = live.filter(r => new Date(r.scheduled_at) < t).sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : -1);
+  const next = live.filter(r => new Date(r.scheduled_at) >= t).sort((a, b) => a.scheduled_at < b.scheduled_at ? -1 : 1);
+  if (!waiting.length && !next.length) return empty("No interviews lined up", "Add rounds from an application to see them here.");
+  let html = section("Waiting to hear back", waiting.map(r => slot(r, { showDay: true })), "", "late");
+  const days = new Map();
+  for (const r of next) { const k = localKey(new Date(r.scheduled_at)); (days.get(k) || days.set(k, []).get(k)).push(r); }
+  for (const [d, rs] of days) html += section(dayLabel(d, { long: true }), rs.map(r => slot(r)));
+  return html;
+}
+
+// Every word has to appear somewhere in the application or its rounds' notes.
+function renderSearch() {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const text = a => [a.company, a.role, a.location, a.source, a.contact, a.notes, STATUS[a.status],
+    ...roundsOf(a.id).flatMap(r => [r.notes, r.interviewer, KIND[r.kind]])].join(" ").toLowerCase();
+  const found = S.applications.filter(a => { const s = text(a); return words.every(w => s.includes(w)); });
+  if (!found.length) return empty("No matches", `Nothing matches “${query}”.`);
+  return [...OPEN, ...CLOSED].map(s => section(STATUS[s], found.filter(a => a.status === s).map(card), `var(--s-${s})`)).join("");
+}
+
+// ---- events --------------------------------------------------------------
+
+$("#q").addEventListener("input", e => {
+  query = e.target.value.trim();
+  $("#qClear").hidden = !e.target.value;
+  render();
+});
+$("#q").addEventListener("keydown", e => {
+  if (e.key === "Escape") clearSearch();
+  if (e.key === "Enter") e.target.blur();
+});
+function clearSearch() { $("#q").value = ""; query = ""; $("#qClear").hidden = true; render(); }
+$("#qClear").addEventListener("click", () => { clearSearch(); $("#q").focus(); });
+
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.tab;
+  try { localStorage.setItem("jobs.tab", tab); } catch {}
+  if (query) { $("#q").value = ""; query = ""; $("#qClear").hidden = true; }
+  render();
+}));
+
+$("#main").addEventListener("click", e => {
+  const c = e.target.closest(".card");
+  if (c) return openApp(appById(c.dataset.id));
+  const s = e.target.closest(".slot");
+  if (s) {
+    const r = S.rounds.find(x => x.id === Number(s.dataset.round));
+    if (r) openRound(r);
+  }
+});
+
+$("#add").addEventListener("click", () => openApp(null));
+$("#notice").addEventListener("click", openProfile);
+
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
+
+// ---- application dialog --------------------------------------------------
+
+let editing = null;
+const af = $("#appForm");
+$("#statuses").innerHTML = [...OPEN.slice().reverse(), ...CLOSED].map(s =>
+  `<label style="--c:var(--s-${s})"><input type="radio" name="status" value="${s}"><span>${STATUS[s]}</span></label>`).join("");
+
+function openApp(a) {
+  editing = a;
+  af.reset();
+  $("#appHead").textContent = a ? a.company : "New application";
+  const v = a || { status: "applied", applied_on: S.today, expected_ctc: S.profile?.expected_ctc };
+  for (const k of ["company", "role", "location", "work_mode", "source", "url", "contact", "notes", "applied_on"]) af[k].value = v[k] ?? "";
+  af.expected_ctc.value = v.expected_ctc ?? "";
+  af.offered_ctc.value = v.offered_ctc ?? "";
+  af.status.value = v.status;
+  $("#deleteApp").hidden = !a;
+  $("#roundsBox").hidden = !a;
+  syncUrl();
+  if (a) renderRounds();
+  $("#appDialog").showModal();
+  if (!a) af.company.focus();
+}
+
+function syncUrl() {
+  const u = af.url.value.trim();
+  const ok = /^https?:\/\//i.test(u);
+  $("#openUrl").hidden = !ok;
+  if (ok) $("#openUrl").href = u;
+}
+af.url.addEventListener("input", syncUrl);
+
+function renderRounds() {
+  const rs = roundsOf(editing.id).slice().sort((a, b) => (a.scheduled_at || "9999") < (b.scheduled_at || "9999") ? -1 : 1);
+  $("#roundsList").innerHTML = rs.length ? rs.map(r => {
+    const when = r.scheduled_at ? whenLabel(r.scheduled_at) : "No date yet";
+    const c = { scheduled: "var(--accent)", passed: "var(--ok)", failed: "var(--danger)", cancelled: "var(--muted)" }[r.outcome];
+    return `<button type="button" class="r" data-round="${r.id}">
+      <div class="what">${esc(KIND[r.kind])}<div>${esc(when)}${r.mode ? ` · ${MODE[r.mode]}` : ""}</div></div>
+      <span class="badge" style="--c:${c}">${OUTCOME[r.outcome]}</span>
+    </button>`;
+  }).join("") : `<div class="none">No rounds yet.</div>`;
+}
+$("#roundsList").addEventListener("click", e => {
+  const b = e.target.closest("[data-round]");
+  if (!b) return;
+  const r = S.rounds.find(x => x.id === Number(b.dataset.round));
+  if (r) openRound(r);
+});
+$("#addRound").addEventListener("click", () => openRound(null, editing));
+
+af.addEventListener("submit", async e => {
+  e.preventDefault();
+  const num = v => v === "" ? null : Number(v);
+  const body = {
+    company: af.company.value.trim(),
+    role: af.role.value.trim(),
+    status: af.status.value || "applied",
+    location: af.location.value.trim() || null,
+    work_mode: af.work_mode.value || null,
+    source: af.source.value.trim() || null,
+    url: af.url.value.trim() || null,
+    contact: af.contact.value.trim() || null,
+    expected_ctc: num(af.expected_ctc.value),
+    offered_ctc: num(af.offered_ctc.value),
+    applied_on: af.applied_on.value || null,
+    notes: af.notes.value.trim() || null,
+  };
+  try {
+    const was = editing?.status;
+    const saved = editing ? await api("PATCH", `api/applications/${editing.id}`, body) : await api("POST", "api/applications", body);
+    $("#appDialog").close();
+    await load();
+    if (!editing) toast(`Added ${saved.company}`);
+    else if (was !== saved.status) toast(`${saved.company}: ${STATUS[saved.status]}`);
+  } catch (err) { toast(err.message); }
+});
+
+$("#deleteApp").addEventListener("click", async () => {
+  const a = editing;
+  if (!a) return;
+  const n = roundsOf(a.id).length;
+  if (!confirm(`Delete ${a.company}${n ? ` and its ${n} round${n === 1 ? "" : "s"}` : ""}? This can't be undone.`)) return;
+  try {
+    await api("DELETE", `api/applications/${a.id}`);
+    $("#appDialog").close();
+    load();
+  } catch (e) { toast(e.message); }
+});
+
+// ---- round dialog --------------------------------------------------------
+
+let editingRound = null, roundApp = null;
+const rf = $("#roundForm");
+rf.kind.innerHTML = Object.entries(KIND).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+
+function openRound(r, a = null) {
+  editingRound = r;
+  roundApp = r ? appById(r.application_id) : a;
+  rf.reset();
+  $("#roundHead").textContent = `${r ? "Round" : "New round"} · ${roundApp?.company || ""}`;
+  if (r) {
+    rf.kind.value = r.kind;
+    rf.mode.value = r.mode || "";
+    rf.scheduled_at.value = r.scheduled_at ? toLocalInput(new Date(r.scheduled_at)) : "";
+    rf.outcome.value = r.outcome;
+    rf.interviewer.value = r.interviewer || "";
+    rf.notes.value = r.notes || "";
+  } else {
+    // Guess the next round from the ones already there.
+    const done = roundsOf(roundApp.id).map(x => x.kind);
+    rf.kind.value = !done.length ? "hr" : !done.includes("technical") ? "technical" : !done.includes("manager") ? "manager" : "final";
+    rf.mode.value = "video";
+  }
+  $("#deleteRound").hidden = !r;
+  $("#roundDialog").showModal();
+}
+
+rf.addEventListener("submit", async e => {
+  e.preventDefault();
+  const body = {
+    kind: rf.kind.value,
+    mode: rf.mode.value || null,
+    scheduled_at: rf.scheduled_at.value ? new Date(rf.scheduled_at.value).toISOString() : null,
+    outcome: rf.outcome.value,
+    interviewer: rf.interviewer.value.trim() || null,
+    notes: rf.notes.value.trim() || null,
+  };
+  try {
+    if (editingRound) await api("PATCH", `api/rounds/${editingRound.id}`, body);
+    else await api("POST", `api/applications/${roundApp.id}/rounds`, body);
+    $("#roundDialog").close();
+    // A first scheduled round moves an early-stage application along.
+    const a = roundApp;
+    if (!editingRound && a && ["wishlist", "applied"].includes(a.status)) {
+      await api("PATCH", `api/applications/${a.id}`, { status: body.kind === "hr" ? "screening" : "interviewing" });
+      if ($("#appDialog").open && editing?.id === a.id) af.status.value = body.kind === "hr" ? "screening" : "interviewing";
+    } else if (!editingRound && a && a.status === "screening" && body.kind !== "hr") {
+      await api("PATCH", `api/applications/${a.id}`, { status: "interviewing" });
+      if ($("#appDialog").open && editing?.id === a.id) af.status.value = "interviewing";
+    }
+    load();
+  } catch (err) { toast(err.message); }
+});
+
+$("#deleteRound").addEventListener("click", async () => {
+  const r = editingRound;
+  if (!r || !confirm(`Delete this ${KIND[r.kind]} round?`)) return;
+  try {
+    await api("DELETE", `api/rounds/${r.id}`);
+    $("#roundDialog").close();
+    load();
+  } catch (e) { toast(e.message); }
+});
+
+// ---- profile dialog ------------------------------------------------------
+
+const pf = $("#profileForm");
+function openProfile() {
+  const p = S.profile || {};
+  pf.reset();
+  for (const k of ["headline", "experience_years", "notice_ends_on", "current_ctc", "expected_ctc", "notes"]) pf[k].value = p[k] ?? "";
+  $("#profileDialog").showModal();
+}
+pf.addEventListener("submit", async e => {
+  e.preventDefault();
+  const num = v => v === "" ? null : Number(v);
+  try {
+    await api("PUT", "api/profile", {
+      headline: pf.headline.value.trim(),
+      experience_years: num(pf.experience_years.value),
+      notice_ends_on: pf.notice_ends_on.value || null,
+      current_ctc: num(pf.current_ctc.value),
+      expected_ctc: num(pf.expected_ctc.value),
+      notes: pf.notes.value.trim() || null,
+    });
+    $("#profileDialog").close();
+    load();
+  } catch (err) { toast(err.message); }
+});
+
+// Pick up a new day (and edits from Claude) when the tab comes back into view.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+load();
+</script>
+</body>
+</html>
