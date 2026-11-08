@@ -6,7 +6,7 @@ A to-do list page for the phone: add tasks in one line, give them a due date, pr
 phone browser ──► nginx (127.0.0.1:80) ──/todos/──► FastAPI (app.py, 127.0.0.1:8002) ──► PostgreSQL, schema `todos`
 ```
 
-It runs on its own, from its own directory, with its own virtualenv, settings and logs. It shares only the Postgres server (where the `todos` schema lives, `schema.sql`) and nginx on port 80, where it adds a `/todos/` location.
+It runs on its own, from its own directory, with its own virtualenv, settings and logs. It shares the Postgres server, where the `todos` schema lives (`schema.sql`), and nginx's localhost site, which comes from the exocortex repo (`main` branch, `nginx/localhost.conf`) along with the home page at http://localhost/.
 
 ## The page
 
@@ -20,7 +20,7 @@ It runs on its own, from its own directory, with its own virtualenv, settings an
 
 ```sh
 apt install -y nginx
-git clone -b claude/jolly-hypatia-h4hw2i https://github.com/hereliesadvaith/exocortex.git /root/todos
+git clone -b todos https://github.com/hereliesadvaith/exocortex.git /root/todos
 cd /root/todos
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -50,13 +50,7 @@ nano .env
 
 ### nginx
 
-`nginx.conf` here is not a whole site but a pair of `location` blocks. `start.sh` links it in as `/etc/nginx/localhost.d/todos.conf`, and the server on 127.0.0.1:80 (the habits site) pulls in every file there with one line inside its `server { }` block:
-
-```nginx
-include /etc/nginx/localhost.d/*.conf;
-```
-
-That way each app on http://localhost/ brings its own path without editing the others. `./start.sh status` says whether that include is in place.
+`nginx.conf` here is just the `/todos/` locations. `start.sh` links it in as `/etc/nginx/localhost.d/todos.conf`, which the exocortex localhost site includes, and links `app.json` into `/etc/exocortex/apps/` so the home page shows a Todos icon with its status. Start the exocortex server first on a fresh setup; `./start.sh status` says whether the include is in place.
 
 ## Run it
 
