@@ -7,11 +7,13 @@
 #   "python-dotenv",
 # ]
 # ///
+import copy
 import os
 from pathlib import Path
 
 import ngrok
 import psycopg
+import uvicorn.config
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.github import GitHubProvider
@@ -37,6 +39,12 @@ ALLOWED_USERS = {
 }
 
 PORT = int(os.getenv("MCP_PORT", "8000"))
+
+# Uvicorn's default log format has no timestamps; prefix every line with one.
+LOG_CONFIG = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+for _formatter in LOG_CONFIG["formatters"].values():
+    _formatter["fmt"] = "%(asctime)s " + _formatter["fmt"]
+    _formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
 
 
 class AllowlistedGitHubProvider(GitHubProvider):
@@ -87,4 +95,9 @@ if __name__ == "__main__":
             domain=os.environ["NGROK_DOMAIN"],
         )
         print(f"ngrok tunnel: {tunnel.url()} -> localhost:{PORT}", flush=True)
-    mcp.run(transport="http", host=os.getenv("MCP_HOST", "127.0.0.1"), port=PORT)
+    mcp.run(
+        transport="http",
+        host=os.getenv("MCP_HOST", "127.0.0.1"),
+        port=PORT,
+        uvicorn_config={"log_config": LOG_CONFIG},
+    )
