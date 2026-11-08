@@ -11,3 +11,4 @@ update.log
 
 # local leftovers
 *.bak
+server.log.*
