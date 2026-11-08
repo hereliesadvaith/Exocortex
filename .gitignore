@@ -12,3 +12,8 @@ update.log
 # local leftovers
 *.bak
 server.log.*
+
+# home page
+home/home.log
+home/home.log.1
+home/home.pid

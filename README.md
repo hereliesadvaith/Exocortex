@@ -132,9 +132,10 @@ nano .env   # or any editor
 ```sh
 ./start.sh          # foreground (Ctrl+C to stop)
 ./start.sh -d       # background, appends to server.log (rotated to server.log.1-3 at 1 MB)
-./start.sh stop     # stop the background server
+./start.sh stop     # stop the background server and the home page
 ./start.sh restart  # stop, start in the background, wait until it answers
 ./start.sh update   # git pull, then restart; rolls back if the new code doesn't start
+./start.sh status   # MCP server, tunnel, home page, nginx, Postgres, registered apps
 tail -f server.log
 ```
 
@@ -158,6 +159,60 @@ claude mcp add --transport http exocortex https://<your-ngrok-domain>/mcp
 
 Then run `/mcp` inside Claude Code to authenticate.
 
+## Home page and apps
+
+Open **http://localhost/** in the phone's browser for the home page: an icon for each app on the phone, with a dot that says whether it's up, and below that the server's status:
+
+- **Services**: the MCP server, the ngrok tunnel (checked from outside at most once a minute), Postgres and nginx, with how long each has been up.
+- **Phone**: memory, storage and load average.
+- **Database**: size, version, and each schema's tables, views, approximate rows and size.
+- **Recent errors**: the last error lines from `server.log`, the home page's log and each app's log.
+
+It refreshes every 15 seconds while it's open, and only reads; starting and stopping stay with `start.sh`.
+
+```
+phone browser ──► nginx (127.0.0.1:80) ──┬─ /          ──► home/app.py (127.0.0.1:8003)
+                                         ├─ /habits/   ──► habits app (127.0.0.1:8001)
+                                         └─ /todos/    ──► todos app  (127.0.0.1:8002)
+```
+
+Setup is one package, then `start.sh` does the rest each time it starts the server:
+
+```sh
+apt install -y nginx
+```
+
+- `nginx/localhost.conf` is the only nginx site. `start.sh` links it in as `/etc/nginx/sites-enabled/exocortex` (replacing Debian's default site) and starts or reloads nginx.
+- `home/app.py` runs from this repo's `.venv` and `.env` (it reads Postgres with the same login as the MCP server), and logs to `home/home.log`. Set `HOME_PORT` in `.env` to move it off 8003.
+- If nginx or the home page fails to start, the MCP server still runs; `./start.sh status` shows what's down.
+
+Everything here listens on 127.0.0.1 only, so only apps on the phone can reach it. ngrok forwards to the MCP server's port alone, never to nginx or the home page.
+
+### Adding an app
+
+Each app lives in its own directory (habits on the `habits` branch in `/root/habits`, todos on the `todos` branch in `/root/todos`) with its own `start.sh`, and plugs in with two symlinks:
+
+| Link | Points to | Does |
+|---|---|---|
+| `/etc/nginx/localhost.d/<app>.conf` | the app's `nginx.conf`: `location` blocks for `/<app>/` | the localhost site includes it |
+| `/etc/exocortex/apps/<app>.json` | the app's `app.json` | the home page lists it |
+
+`app.json`:
+
+```json
+{
+  "name": "Todos",
+  "description": "Tasks & lists",
+  "path": "/todos/",
+  "health": "http://127.0.0.1:8002/api/state?done_days=1",
+  "color": "#3f5bb5",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' ...>...</svg>",
+  "log": "todos.log"
+}
+```
+
+`health` is any URL that answers below 500 when the app is fine. `icon` is drawn white-on-`color` as an image, so it can't run script. `log` is relative to the app's directory, for **Recent errors**.
+
 ## Shell and self-update
 
 Set `ENABLE_SHELL=true` in `.env` and restart to add two more tools:
@@ -179,7 +234,7 @@ With the shell enabled, anyone you allowlist can run commands on the phone and r
 
 - Disable battery optimisation for Termux (Android Settings → Apps → Termux → Battery → Unrestricted).
 - Keep the Termux session open; `start.sh` runs `termux-wake-lock` when Termux exposes it. You can also run `termux-wake-lock` in Termux before `proot-distro login debian`.
-- After a reboot: open Termux → `proot-distro login debian` → `cd exocortex && ./start.sh -d`.
+- After a reboot: open Termux → `proot-distro login debian` → `cd exocortex && ./start.sh -d`, then each app's `start.sh start` (`/root/habits/start.sh start`, `/root/todos/start.sh start`).
 
 ## Troubleshooting
 
