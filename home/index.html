@@ -208,7 +208,7 @@ function renderApps(apps) {
       : `<span class="letter">${esc(a.name[0] || "?")}</span>`;
     return `<a class="app ${a.ok ? "" : "down"}" href="${esc(a.path)}" title="${esc(a.description)}">
       <span class="tile" style="background-color:${esc(a.color)}">${icon}<span class="badge"></span></span>
-      <span class="label">${esc(a.name)}<small>${a.ok ? esc(a.description || "running") : "down"}</small></span>
+      <span class="label">${esc(a.name)}${a.ok ? "" : "<small>down</small>"}</span>
     </a>`;
   }).join("");
 }
