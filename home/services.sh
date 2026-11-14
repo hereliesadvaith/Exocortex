@@ -62,10 +62,25 @@ nginx_stop() { nginx_up && nginx -s quit && echo "nginx: stopped"; return 0; }
 # ---- PostgREST ------------------------------------------------------------------
 pgrst_up() { pid_is "$PGRST_PID" postgrest; }
 
+# PostgREST's static build sometimes hangs at startup on Android (roughly 1 start in
+# 8, before it logs anything; not fixed by its runtime options). A healthy start
+# answers within a second, so give each attempt 5 seconds and retry.
 pgrst_start() {
   if pgrst_up; then echo "postgrest: already running"; return 0; fi
   command -v postgrest >/dev/null || { echo "postgrest isn't installed: run home/install.sh" >&2; return 1; }
   rotate "$PGRST_LOG"
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    pgrst_launch && return 0
+    pgrst_stop >/dev/null
+    echo "postgrest: attempt $attempt didn't answer, retrying" >&2
+  done
+  echo "postgrest: didn't come up after 5 attempts, see $PGRST_LOG" >&2
+  tail -5 "$PGRST_LOG" >&2
+  return 1
+}
+
+pgrst_launch() {
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting postgrest =====" >> "$PGRST_LOG"
   # Logs in over the local socket as home_api (trust auth: only Termux can reach the
   # socket) and serves schema "home" as role home_web.
@@ -80,23 +95,21 @@ pgrst_start() {
   PGRST_LOG_LEVEL=warn \
     nohup postgrest >> "$PGRST_LOG" 2>&1 < /dev/null &
   echo $! > "$PGRST_PID"
-  for _ in $(seq 15); do
-    if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PGRST_PORT/apps"; then
+  for _ in $(seq 10); do
+    if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PGRST_PORT/apps"; then
       echo "postgrest: started"
       return 0
     fi
-    pgrst_up || break
-    sleep 1
+    pgrst_up || return 1
+    sleep 0.5
   done
-  echo "postgrest: didn't come up, see $PGRST_LOG" >&2
-  tail -5 "$PGRST_LOG" >&2
   return 1
 }
 
 pgrst_stop() {
   if pgrst_up; then
     local pid; pid=$(cat "$PGRST_PID")
-    kill "$pid"
+    kill "$pid" 2>/dev/null
     for _ in $(seq 10); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
     kill -9 "$pid" 2>/dev/null
     echo "postgrest: stopped"
