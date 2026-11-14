@@ -112,6 +112,11 @@ start_ngrok() {
   command -v "$NGROK_BIN" >/dev/null || { echo "ngrok not found ($NGROK_BIN); see README" >&2; return 1; }
   rotate_log ngrok.log
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting ngrok =====" >> ngrok.log
+  # ngrok is a Linux build: it looks for CA certificates in /etc/ssl, which Android
+  # doesn't have, so its HTTPS calls (e.g. the update check) fail. Point it at Termux's.
+  if [[ -z ${SSL_CERT_FILE:-} && -n ${PREFIX:-} && -f $PREFIX/etc/tls/cert.pem ]]; then
+    export SSL_CERT_FILE=$PREFIX/etc/tls/cert.pem
+  fi
   # NGROK_AUTHTOKEN is read from the environment.
   nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" \
     --log stdout --log-format logfmt >> ngrok.log 2>&1 &

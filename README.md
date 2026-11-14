@@ -142,6 +142,7 @@ Then run `/mcp` inside Claude Code to authenticate.
 | `pip install` fails building `pydantic-core` / `rpds-py` / `watchfiles` | Check `rust` and `binutils` are installed and `ANDROID_API_LEVEL` is exported in the same shell, then retry. |
 | `pip install` tries to build `cryptography` | The venv can't see Termux's package: recreate it with `--system-site-packages`. |
 | `ngrok.log` shows DNS errors like `lookup ... on [::1]:53` | The Linux ngrok binary looks for `/etc/resolv.conf`, which Android doesn't have. `pkg install proot`, then set `NGROK_BIN` to a wrapper script that runs `proot -b $PREFIX/etc/resolv.conf:/etc/resolv.conf ngrok "$@"`. |
+| `ngrok.log` shows `x509: certificate signed by unknown authority` | ngrok can't find Android's CA certificates. `start.sh` points it at `$PREFIX/etc/tls/cert.pem` (from the `ca-certificates` package); restart with `./start.sh restart` after updating. |
 | `ngrok.log` says the domain is already in use | Another ngrok agent is still connected with that domain (an old session, or another device). Stop it, then `./start.sh restart`. |
 | `KeyError: 'GITHUB_CLIENT_ID'` (or another variable) on start | That variable is missing from `.env`. |
 | Every client gets `401` after signing in | Your GitHub username isn't in `GITHUB_ALLOWED_USERS`, or the callback URL in the OAuth app doesn't match your domain. |
