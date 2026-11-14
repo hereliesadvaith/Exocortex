@@ -58,7 +58,7 @@ curl -LO https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
 tar xzf ngrok-v3-stable-linux-arm64.tgz -C $PREFIX/bin && rm ngrok-v3-stable-linux-arm64.tgz
 ```
 
-`start.sh` passes `ngrok.yml` to the agent. ngrok is a Linux build: it looks names up through `/etc/resolv.conf`, which Android doesn't have, so it falls back to a DNS server on the phone itself (`[::1]:53`), which only answers while the phone's hotspot is on. `ngrok.yml` points it at public DNS (Google, Cloudflare, Quad9; IPv4 and IPv6) and turns off the update check and the revocation-list download, which do their own lookups. If the tunnel isn't up within 30 seconds, `start.sh` leaves ngrok running: it keeps retrying.
+`start.sh` passes `ngrok.yml` to the agent. ngrok is a Linux build: it looks names up through `/etc/resolv.conf`, which Android doesn't have, so it falls back to a DNS server on the phone itself (`[::1]:53`), which only answers while the phone's hotspot is on. `ngrok.yml` points it at public DNS (Google, Cloudflare, Quad9; IPv4 only, because ngrok can't use IPv6 addresses there) and turns off the update check and the revocation-list download, which do their own lookups. If the tunnel isn't up within 30 seconds, `start.sh` leaves ngrok running: it keeps retrying.
 
 ### GitHub OAuth app
 
