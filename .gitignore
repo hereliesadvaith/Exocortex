@@ -1,6 +1,6 @@
+# nothing is generated here any more; kept for old checkouts
 .env
 .venv/
 __pycache__/
-*.pyc
-jobs.log
-jobs.pid
+*.log
+*.pid
