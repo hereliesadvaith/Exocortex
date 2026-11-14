@@ -189,9 +189,16 @@ try:
 except ValueError:
     pass
 on = srv_alive and ngrok_alive
+# A switch is pending until it has fully happened: for "on", the server answers
+# and the tunnel has its public URL (ngrok can run a moment before it connects).
 pending = None
-if switch and time.time() - switch.get("at", 0) < 45 and switch.get("on") != on:
-    pending = "starting" if switch.get("on") else "stopping"
+if switch and time.time() - switch.get("at", 0) < 45:
+    if switch.get("on"):
+        done = srv_status is not None and url is not None
+    else:
+        done = not srv_alive and not ngrok_alive
+    if not done:
+        pending = "starting" if switch.get("on") else "stopping"
 
 mcp = {
     "on": on, "pending": pending, "url": url,

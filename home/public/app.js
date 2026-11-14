@@ -66,7 +66,7 @@ async function api(path, opts = {}) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (e) { /* not JSON */ }
-  if (!res.ok) throw new Error((data && (data.message || data.hint)) || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(((data && (data.message || data.hint)) || `HTTP ${res.status}`).replace(/^plpy\.Error:\s*/, ""));
   return data;
 }
 
@@ -116,7 +116,7 @@ function renderApps(apps) {
 // ---- render: MCP ----------------------------------------------------------------
 function renderMcp(m) {
   // While a switch is in flight, show where it's going until the server agrees.
-  if (switching && (m.on === switching.on || Date.now() > switching.until)) switching = null;
+  if (switching && ((m.on === switching.on && !m.pending) || Date.now() > switching.until)) switching = null;
   const pending = switching ? (switching.on ? "starting" : "stopping") : m.pending;
 
   const state = $("mcp-state");

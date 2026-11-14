@@ -1,6 +1,6 @@
 # PL/Python for Termux PostgreSQL
 
-Termux's `postgresql` package is built without PL/Python. This branch builds the two extensions it leaves out and installs them into Termux's Postgres:
+Termux's `postgresql` package is built without PL/Python. This folder builds the two extensions it leaves out and installs them into Termux's Postgres:
 
 | Extension | What it adds |
 |---|---|
@@ -13,10 +13,10 @@ They're compiled against the installed Postgres's own headers and `pg_config.h` 
 
 ```sh
 pkg install -y postgresql python perl clang make
-git clone -b plpython https://github.com/hereliesadvaith/exocortex.git ~/plpython
-cd ~/plpython
-./build.sh
+~/exocortex/postgres/plpython/build.sh
 ```
+
+`~/exocortex/home/install.sh` runs it for you when PL/Python is missing.
 
 `build.sh`:
 
@@ -42,13 +42,13 @@ The extensions are tied to the Postgres and Python they were built with.
 ```sh
 apt-mark unhold postgresql
 pkg upgrade postgresql
-cd ~/plpython && git pull && ./build.sh      # rebuilds for the new version and holds it again
+~/exocortex/postgres/plpython/build.sh       # rebuilds for the new version and holds it again
 pg_ctl -D $PREFIX/var/lib/postgresql restart
 ```
 
 A new major version (19) also needs the usual `pg_upgrade` or dump and restore of the data directory; rebuild before starting the new server.
 
-**Python**: a new minor version (3.14 → 3.15) removes the `libpython3.14.so` that `plpython3.so` links to, and every Python function then fails to load. Rerun `./build.sh` after `pkg upgrade` installs a new Python, then restart Postgres.
+**Python**: a new minor version (3.14 → 3.15) removes the `libpython3.14.so` that `plpython3.so` links to, and every Python function then fails to load. Rerun `build.sh` after `pkg upgrade` installs a new Python, then restart Postgres.
 
 ## Notes
 
