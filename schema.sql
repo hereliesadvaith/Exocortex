@@ -284,9 +284,10 @@ set search_path = pg_catalog, tvtime
 as $py$
 import json, re, urllib.parse, urllib.request
 
-q = (q or "").strip()
-m = re.search(r"tt\d{5,}", q)
-key = m.group(0) if m else q.lower()
+# (PL/Python arguments act as globals: assigning to q here would break it.)
+text = (q or "").strip()
+m = re.search(r"tt\d{5,}", text)
+key = m.group(0) if m else text.lower()
 if len(key) < 2:
     return "[]"
 url = "https://v3.sg.media-imdb.com/suggestion/x/" + urllib.parse.quote(key) + ".json"
