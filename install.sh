@@ -7,6 +7,7 @@ set -euo pipefail
 APP=habits
 NAME="Habits"
 DESCRIPTION="Streaks & check-ins"
+SORT=10   # order of the tiles on the home page
 ICON="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M8 12.5l2.8 2.8L16.5 9.5'/></svg>"
 
 DIR=$(cd "$(dirname "$0")" && pwd)
@@ -44,11 +45,11 @@ nginx -t -q
 nginx -s reload
 
 echo "== home page"
-psql_q -v id="$APP" -v name="$NAME" -v description="$DESCRIPTION" -v icon="$ICON" <<'SQL'
+psql_q -v id="$APP" -v sort="$SORT" -v name="$NAME" -v description="$DESCRIPTION" -v icon="$ICON" <<'SQL'
 insert into home.apps (id, name, description, path, health_url, icon, api_schema, sort)
-values (:'id', :'name', :'description', '/' || :'id' || '/', 'http://127.0.0.1/' || :'id' || '/', :'icon', :'id', 10)
+values (:'id', :'name', :'description', '/' || :'id' || '/', 'http://127.0.0.1/' || :'id' || '/', :'icon', :'id', :sort)
 on conflict (id) do update set name = excluded.name, description = excluded.description, path = excluded.path,
-  health_url = excluded.health_url, icon = excluded.icon, api_schema = excluded.api_schema;
+  health_url = excluded.health_url, icon = excluded.icon, api_schema = excluded.api_schema, sort = excluded.sort;
 SQL
 bash "$EXO/home/sync-api.sh"
 
