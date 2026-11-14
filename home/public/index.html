@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f0f0ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>Exocortex</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23d71921'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/doto.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved theme before first paint so the page doesn't flash.
+    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <div>
+        <h1 class="display">Exocortex</h1>
+        <p class="mono muted" id="clock">&nbsp;</p>
+      </div>
+      <button class="theme-btn" id="theme" type="button" aria-label="Theme: auto" title="Theme">
+        <span class="theme-glyph" aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <div class="banner" id="banner" hidden></div>
+
+    <section aria-labelledby="apps-h">
+      <h2 class="label" id="apps-h"><span class="dot"></span>Apps <span class="count" id="apps-count"></span></h2>
+      <div class="apps" id="apps"><div class="skeleton tile"></div><div class="skeleton tile"></div><div class="skeleton tile"></div><div class="skeleton tile"></div></div>
+    </section>
+
+    <section aria-labelledby="mcp-h">
+      <h2 class="label" id="mcp-h"><span class="dot"></span>MCP</h2>
+      <div class="card mcp" id="mcp">
+        <div class="mcp-head">
+          <div>
+            <p class="mono muted small">Server + ngrok tunnel</p>
+            <p class="display state" id="mcp-state">—</p>
+          </div>
+          <button class="switch" id="mcp-switch" type="button" role="switch" aria-checked="false" aria-label="MCP server" disabled>
+            <span class="knob"></span>
+          </button>
+        </div>
+        <button class="url mono" id="mcp-url" type="button" title="Copy URL" hidden></button>
+        <div class="stats" id="mcp-stats"></div>
+        <div class="commands" id="mcp-commands"></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="sys-h">
+      <h2 class="label" id="sys-h"><span class="dot"></span>System</h2>
+      <div class="card system" id="system">
+        <div class="skeleton line"></div><div class="skeleton line"></div>
+      </div>
+    </section>
+
+    <footer class="mono muted small">
+      <span id="updated">connecting…</span>
+      <span>localhost:8080</span>
+    </footer>
+  </main>
+  <div class="toast mono" id="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

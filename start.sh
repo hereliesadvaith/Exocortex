@@ -118,11 +118,13 @@ start_ngrok() {
     export SSL_CERT_FILE=$PREFIX/etc/tls/cert.pem
   fi
   # NGROK_AUTHTOKEN is read from the environment.
-  nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" \
-    --log stdout --log-format logfmt >> ngrok.log 2>&1 &
+  # warn level: info would also log every status poll of the local API.
+  # ngrok.yml: DNS settings that make it work on Android (see the file).
+  nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" --config ngrok.yml \
+    --log stdout --log-format logfmt --log-level warn >> ngrok.log 2>&1 &
   echo $! > ngrok.pid
   local url
-  for _ in $(seq 20); do
+  for _ in $(seq 30); do
     if url=$(ngrok_url); then
       echo "ngrok tunnel: $url -> 127.0.0.1:$PORT"
       return 0
@@ -130,9 +132,16 @@ start_ngrok() {
     alive ngrok.pid || break
     sleep 1
   done
-  echo "ngrok didn't come up, see ngrok.log" >&2
-  tail -10 ngrok.log >&2 || true
-  stop_pid ngrok.pid ngrok >/dev/null
+  echo "ngrok didn't come up; its errors (full log: ngrok.log):" >&2
+  sed -n "$(grep -n '===== .* starting ngrok' ngrok.log | tail -1 | cut -d: -f1),\$p" ngrok.log \
+    | grep -vE 'netlinkrib' | grep -E 'lvl=(eror|crit|warn)|ERR_NGROK' | tail -8 >&2 || true
+  # ngrok keeps retrying by itself, so a slow network (or a phone that just booted)
+  # only delays the tunnel. Leave it running unless it has exited.
+  if alive ngrok.pid; then
+    echo "ngrok is still running and retrying; check with: ./start.sh status" >&2
+  else
+    rm -f ngrok.pid
+  fi
   return 1
 }
 
@@ -179,6 +188,12 @@ update() {
   if start_server; then
     start_ngrok || true
     log "update ok: now at ${new:0:7}"
+    # The home page's static files are served straight from the checkout; its schema,
+    # nginx config, PostgREST and boot script are applied by home/install.sh.
+    if [[ -x home/install.sh ]] && ! git diff --quiet "$old" "$new" -- home termux-boot postgres; then
+      log "home page changed, running home/install.sh"
+      bash home/install.sh || log "home/install.sh failed; the MCP server is fine, fix the home page by hand" >&2
+    fi
     return 0
   fi
 
