@@ -24,7 +24,13 @@ fi
 # ---- PostgREST ----------------------------------------------------------------------
 PGRST_VERSION=16.5
 PGRST_SHA256=96d75a34c7c095d5f97b87f88042f898192724350861328db9e1509e696ea057
-if ! postgrest --version 2>/dev/null | grep -q "PostgREST $PGRST_VERSION\$"; then
+# --version can hang now and then on Android (see services.sh), so time-limit it.
+pgrst_version() {
+  local i
+  for i in 1 2 3; do timeout 5 postgrest --version </dev/null 2>/dev/null && return 0; done
+  return 1
+}
+if ! pgrst_version | grep -q "PostgREST $PGRST_VERSION\$"; then
   log "installing PostgREST $PGRST_VERSION"
   tmp=$(mktemp -d)
   curl -fsSL --retry 5 -o "$tmp/p.tar.xz" \
