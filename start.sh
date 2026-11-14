@@ -1,61 +1,64 @@
 #!/usr/bin/env bash
-# Start the exocortex FastMCP server with its ngrok tunnel, plus the home page
-# (home/app.py on 127.0.0.1:8003) and nginx in front of it at http://localhost/.
-#   ./start.sh          run the MCP server in the foreground (Ctrl+C to stop)
-#   ./start.sh -d       run in the background, appending to server.log (rotated at 1 MB)
-#   ./start.sh stop     stop the MCP server and the home page (nginx keeps serving the apps)
-#   ./start.sh restart  stop, then start in the background and wait until it answers
-#   ./start.sh update   git pull --ff-only, then restart; rolls back if the new code
-#                       doesn't come up. Logs to update.log when run by the MCP tool.
-#   ./start.sh status   show whether each part is up
+# Start the exocortex MCP server (server.py on 127.0.0.1:$MCP_PORT) and the ngrok
+# agent that publishes it at https://$NGROK_DOMAIN.
+#   ./start.sh          ngrok in the background, server in the foreground (Ctrl+C stops the server)
+#   ./start.sh -d       both in the background, logging to server.log and ngrok.log
+#   ./start.sh stop     stop both
+#   ./start.sh restart  stop, then start both in the background
+#   ./start.sh status   show whether each is up
+#   ./start.sh update   git pull --ff-only, then restart the server; rolls back if the
+#                       new code doesn't come up. Logs to update.log when run by the MCP tool.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-PIDFILE=server.pid
-PORT="${MCP_PORT:-$(grep -E '^MCP_PORT=' .env 2>/dev/null | cut -d= -f2 || true)}"
-PORT="${PORT:-8000}"
+[[ -f .env ]] || { echo "no .env: cp .env.example .env, fill it in, chmod 600 .env" >&2; exit 1; }
+set -a; source ./.env; set +a
 
-# proot's Debian runs on UTC; show log timestamps in local time. Override with TZ=... ./start.sh
-export TZ="${TZ:-Asia/Kolkata}"
+PORT="${MCP_PORT:-8000}"
+PYTHON=.venv/bin/python; [[ -x $PYTHON ]] || PYTHON=python3
+NGROK_BIN="${NGROK_BIN:-ngrok}"
+NGROK_API=127.0.0.1:4040   # the agent's local status API
+
+LOG_MAX_BYTES=$((1024 * 1024))
+LOG_KEEP=3
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
-HOME_PIDFILE=home/home.pid
-HOME_LOG=home/home.log
-HOME_PORT="${HOME_PORT:-$(grep -E '^HOME_PORT=' .env 2>/dev/null | cut -d= -f2 || true)}"
-HOME_PORT="${HOME_PORT:-8003}"
-NGINX_SITE=/etc/nginx/sites-enabled/exocortex
-SNIPPETS=/etc/nginx/localhost.d   # each app's `location` blocks for http://localhost/<app>/
-APPS=/etc/exocortex/apps          # each app's app.json, for the home page
+# Keep a log across restarts; once it passes LOG_MAX_BYTES, shift it to .1
+# (older ones to .2 .. .LOG_KEEP, the oldest is dropped).
+rotate_log() {
+  local f=$1
+  [[ -f $f && $(stat -c %s "$f") -ge $LOG_MAX_BYTES ]] || return 0
+  for ((i = LOG_KEEP - 1; i >= 1; i--)); do
+    [[ -f $f.$i ]] && mv -f "$f.$i" "$f.$((i + 1))"
+  done
+  mv -f "$f" "$f.1"
+}
 
-stop_server() {
-  if [[ -f $PIDFILE ]] && pid=$(cat $PIDFILE) && kill "$pid" 2>/dev/null; then
+alive() { [[ -f $1 ]] && kill -0 "$(cat "$1")" 2>/dev/null; }
+
+stop_pid() {  # stop_pid <pidfile> <name>
+  local pidfile=$1 name=$2 pid
+  if [[ -f $pidfile ]] && pid=$(cat "$pidfile") && kill "$pid" 2>/dev/null; then
     # Wait for it to actually exit so a quick restart doesn't hit a busy port.
     for _ in $(seq 10); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
     if kill -0 "$pid" 2>/dev/null; then
-      echo "pid $pid didn't exit after 10s, sending SIGKILL" >&2
+      echo "$name (pid $pid) didn't exit after 10s, sending SIGKILL" >&2
       kill -9 "$pid" 2>/dev/null || true
     fi
-    echo "stopped (pid $pid)"
+    echo "$name stopped (pid $pid)"
   else
-    echo "not running"
+    echo "$name not running"
   fi
-  rm -f $PIDFILE
+  rm -f "$pidfile"
 }
 
-ensure_postgres() {
-  # Postgres doesn't come back on its own after a phone restart.
-  if ! pg_lsclusters -h 2>/dev/null | grep -q " online"; then
-    echo "starting postgres..."
-    # Run as postgres: under PRoot every file looks root-owned to root, and chown is a no-op.
-    su postgres -c "pg_ctlcluster 17 main start"
-  fi
-}
+# ---- MCP server ---------------------------------------------------------------
 
 # True once the server process is alive and answers HTTP on its port (any status, e.g. 401).
-healthy() {
-  [[ -f $PIDFILE ]] && kill -0 "$(cat $PIDFILE)" 2>/dev/null || return 1
-  .venv/bin/python - "$PORT" <<'EOF' 2>/dev/null
+server_up() {
+  alive server.pid || return 1
+  "$PYTHON" - "$PORT" <<'EOF' 2>/dev/null
 import sys, urllib.request, urllib.error
 try:
     urllib.request.urlopen(f"http://127.0.0.1:{sys.argv[1]}/mcp", timeout=3)
@@ -66,105 +69,75 @@ except Exception:
 EOF
 }
 
-# ---- home page and nginx ----------------------------------------------------
-# These sit beside the MCP server: if they fail, the MCP server still runs.
-
-home_healthy() {
-  [[ -f $HOME_PIDFILE ]] && kill -0 "$(cat $HOME_PIDFILE)" 2>/dev/null || return 1
-  .venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:$HOME_PORT/', timeout=3)" 2>/dev/null
-}
-
-stop_home() {
-  if [[ -f $HOME_PIDFILE ]] && pid=$(cat $HOME_PIDFILE) && kill "$pid" 2>/dev/null; then
-    for _ in $(seq 10); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-    kill -9 "$pid" 2>/dev/null || true
-  fi
-  rm -f $HOME_PIDFILE
-}
-
-start_home() {
-  if home_healthy; then return 0; fi
-  stop_home
-  [[ -f $HOME_LOG && $(stat -c %s $HOME_LOG) -ge $((1024 * 1024)) ]] && mv -f $HOME_LOG $HOME_LOG.1
-  echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting home ($(git rev-parse --short HEAD 2>/dev/null || echo unknown)) =====" >> $HOME_LOG
-  nohup .venv/bin/python -m uvicorn home.app:app --host 127.0.0.1 --port "$HOME_PORT" \
-    --no-server-header --no-access-log >> $HOME_LOG 2>&1 &
-  echo $! > $HOME_PIDFILE
-  for _ in $(seq 15); do
-    home_healthy && { echo "home page: http://localhost/"; return 0; }
-    kill -0 "$(cat $HOME_PIDFILE)" 2>/dev/null || break
-    sleep 1
-  done
-  echo "home page didn't come up, see $HOME_LOG" >&2
-  tail -10 $HOME_LOG >&2 || true
-  stop_home
-  return 1
-}
-
-nginx_up() { [[ -f /run/nginx.pid ]] && kill -0 "$(cat /run/nginx.pid)" 2>/dev/null; }
-
-# nginx's one server on 127.0.0.1:80 lives here (nginx/localhost.conf); apps only add
-# their own files to $SNIPPETS and $APPS.
-start_nginx() {
-  command -v nginx >/dev/null || { echo "nginx isn't installed (apt install -y nginx); skipping the home page proxy" >&2; return 1; }
-  mkdir -p $SNIPPETS $APPS
-  if [[ ! -L $NGINX_SITE || $(readlink -f $NGINX_SITE) != "$PWD/nginx/localhost.conf" ]]; then
-    ln -sfn "$PWD/nginx/localhost.conf" $NGINX_SITE
-  fi
-  # Debian's default site and the old habits site also wanted port 80.
-  rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/habits
-  if ! nginx -t -q; then
-    echo "nginx config test failed; nginx left as it was" >&2
-    return 1
-  fi
-  if nginx_up; then nginx -s reload; else nginx; fi   # no systemd under PRoot
-}
-
-# Home page and nginx, after the MCP server.
-start_front() {
-  start_home || true
-  start_nginx || true
-}
-
-LOG=server.log
-LOG_MAX_BYTES=$((1024 * 1024))
-LOG_KEEP=3
-
-# Keep server.log across restarts; once it passes LOG_MAX_BYTES, shift it to
-# server.log.1 (older ones to .2 .. .LOG_KEEP, the oldest is dropped).
-rotate_log() {
-  [[ -f $LOG && $(stat -c %s $LOG) -ge $LOG_MAX_BYTES ]] || return 0
-  for ((i = LOG_KEEP - 1; i >= 1; i--)); do
-    [[ -f $LOG.$i ]] && mv -f "$LOG.$i" "$LOG.$((i + 1))"
-  done
-  mv -f $LOG $LOG.1
-}
-
-start_background() {
-  rotate_log
-  echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting server ($(git rev-parse --short HEAD 2>/dev/null || echo unknown)) =====" >> $LOG
-  nohup .venv/bin/python server.py >> $LOG 2>&1 &
-  echo $! > $PIDFILE
+start_server() {
+  rotate_log server.log
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting server ($(git rev-parse --short HEAD 2>/dev/null || echo unknown)) =====" >> server.log
+  nohup "$PYTHON" server.py >> server.log 2>&1 &
+  echo $! > server.pid
   for _ in $(seq 30); do
-    if healthy; then
-      grep "ngrok tunnel:" $LOG | tail -1 || true
-      echo "running in background (pid $(cat $PIDFILE)). logs: tail -f server.log  stop: ./start.sh stop"
+    if server_up; then
+      echo "server running (pid $(cat server.pid), port $PORT). logs: tail -f server.log"
       return 0
     fi
-    kill -0 "$(cat $PIDFILE)" 2>/dev/null || break
+    alive server.pid || break
     sleep 1
   done
   echo "server didn't come up, see server.log" >&2
-  tail -20 $LOG >&2 || true
-  stop_server >/dev/null
+  tail -20 server.log >&2 || true
+  stop_pid server.pid server >/dev/null
   return 1
 }
+
+# ---- ngrok agent --------------------------------------------------------------
+
+# Prints the public URL once the agent's tunnel is online.
+ngrok_url() {
+  alive ngrok.pid || return 1
+  "$PYTHON" - "$NGROK_API" <<'EOF' 2>/dev/null
+import json, sys, urllib.request
+tunnels = json.load(urllib.request.urlopen(f"http://{sys.argv[1]}/api/tunnels", timeout=3))["tunnels"]
+if not tunnels:
+    sys.exit(1)
+print(tunnels[0]["public_url"])
+EOF
+}
+
+start_ngrok() {
+  if ngrok_url >/dev/null; then return 0; fi
+  stop_pid ngrok.pid ngrok >/dev/null
+  if [[ -z ${NGROK_AUTHTOKEN:-} || -z ${NGROK_DOMAIN:-} ]]; then
+    echo "NGROK_AUTHTOKEN or NGROK_DOMAIN not set in .env; not starting ngrok" >&2
+    return 1
+  fi
+  command -v "$NGROK_BIN" >/dev/null || { echo "ngrok not found ($NGROK_BIN); see README" >&2; return 1; }
+  rotate_log ngrok.log
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') starting ngrok =====" >> ngrok.log
+  # NGROK_AUTHTOKEN is read from the environment.
+  nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" \
+    --log stdout --log-format logfmt >> ngrok.log 2>&1 &
+  echo $! > ngrok.pid
+  local url
+  for _ in $(seq 20); do
+    if url=$(ngrok_url); then
+      echo "ngrok tunnel: $url -> 127.0.0.1:$PORT"
+      return 0
+    fi
+    alive ngrok.pid || break
+    sleep 1
+  done
+  echo "ngrok didn't come up, see ngrok.log" >&2
+  tail -10 ngrok.log >&2 || true
+  stop_pid ngrok.pid ngrok >/dev/null
+  return 1
+}
+
+# ---- update -------------------------------------------------------------------
 
 # Install dependencies if requirements.txt changed between two commits.
 sync_deps() {
   if ! git diff --quiet "$1" "$2" -- requirements.txt; then
     log "requirements.txt changed, installing"
-    .venv/bin/pip install -q -r requirements.txt
+    "$PYTHON" -m pip install -q -r requirements.txt
   fi
 }
 
@@ -177,7 +150,10 @@ update() {
   local old new
   old=$(git rev-parse HEAD)
   log "pulling $(git rev-parse --abbrev-ref HEAD) (at ${old:0:7})"
-  git pull --ff-only
+  if ! git pull --ff-only; then
+    log "git pull failed; server not restarted" >&2
+    return 1
+  fi
   new=$(git rev-parse HEAD)
   if [[ $old == "$new" && "${FORCE_RESTART:-}" != 1 ]]; then
     log "already up to date, not restarting"
@@ -185,7 +161,7 @@ update() {
   fi
   [[ $old != "$new" ]] && git log --oneline "$old..$new"
 
-  if ! sync_deps "$old" "$new" || ! .venv/bin/python -m py_compile server.py home/app.py; then
+  if ! sync_deps "$old" "$new" || ! "$PYTHON" -m py_compile server.py; then
     # The running server is untouched; just put the code back.
     log "new code failed to install or compile; resetting to ${old:0:7}, server not restarted" >&2
     git reset --hard "$old"
@@ -193,10 +169,10 @@ update() {
     return 1
   fi
 
-  stop_server
-  stop_home
-  if start_background; then
-    start_front
+  # ngrok keeps running; only the server restarts.
+  stop_pid server.pid server
+  if start_server; then
+    start_ngrok || true
     log "update ok: now at ${new:0:7}"
     return 0
   fi
@@ -204,8 +180,8 @@ update() {
   log "rolling back to ${old:0:7}" >&2
   git reset --hard "$old"
   sync_deps "$new" "$old" || true
-  if start_background; then
-    start_front
+  if start_server; then
+    start_ngrok || true
     log "rolled back; running ${old:0:7}"
   else
     log "ROLLBACK FAILED: server is down, fix it on the phone" >&2
@@ -213,50 +189,47 @@ update() {
   return 1
 }
 
+# ---- commands -----------------------------------------------------------------
+
+# Keep Android from killing us when the screen is off (Termux only).
+wake_lock() { command -v termux-wake-lock >/dev/null && termux-wake-lock || true; }
+
 case "${1:-}" in
   stop)
-    stop_server
-    stop_home
-    exit 0
+    stop_pid server.pid server
+    stop_pid ngrok.pid ngrok
     ;;
   restart)
-    stop_server
-    stop_home
-    ensure_postgres
-    start_background || exit 1
-    start_front
-    exit 0
+    stop_pid server.pid server
+    stop_pid ngrok.pid ngrok
+    wake_lock
+    start_server
+    start_ngrok
     ;;
   status)
-    healthy && echo "mcp server: up (pid $(cat $PIDFILE), port $PORT)" || echo "mcp server: down"
-    grep "ngrok tunnel:" $LOG 2>/dev/null | tail -1 | sed 's/^/  /' || true
-    home_healthy && echo "home page: up (pid $(cat $HOME_PIDFILE), port $HOME_PORT)" || echo "home page: down"
-    nginx_up && echo "nginx: up (pid $(cat /run/nginx.pid))" || echo "nginx: down"
-    pg_lsclusters -h 2>/dev/null | grep -q " online" && echo "postgres: up" || echo "postgres: down"
-    for f in "$APPS"/*.json; do [[ -e $f ]] && echo "app: $(basename "$f" .json) -> $(readlink -f "$f")"; done
-    exit 0
+    server_up && echo "server: up (pid $(cat server.pid), port $PORT)" || echo "server: down"
+    if url=$(ngrok_url); then echo "ngrok: up (pid $(cat ngrok.pid)) $url"; else echo "ngrok: down"; fi
     ;;
   update)
-    ensure_postgres
     update
-    exit $?
+    ;;
+  -d|"")
+    if alive server.pid; then
+      echo "server already running (pid $(cat server.pid)); use ./start.sh restart" >&2
+      start_ngrok || true
+      exit 1
+    fi
+    wake_lock
+    if [[ ${1:-} == -d ]]; then
+      start_server
+      start_ngrok
+    else
+      start_ngrok || true
+      exec "$PYTHON" server.py
+    fi
+    ;;
+  *)
+    echo "usage: $0 [-d|stop|restart|status|update]" >&2
+    exit 2
     ;;
 esac
-
-if [[ -f $PIDFILE ]] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-  echo "already running (pid $(cat $PIDFILE)); use ./start.sh stop first" >&2
-  exit 1
-fi
-
-ensure_postgres
-
-# Keep Android from killing us when the screen is off (only exists in Termux).
-command -v termux-wake-lock >/dev/null && termux-wake-lock || true
-
-if [[ "${1:-}" == "-d" ]]; then
-  start_background || exit 1
-  start_front
-else
-  start_front
-  exec .venv/bin/python server.py
-fi

@@ -1,0 +1,6 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Termux:Boot runs this after the phone boots. Install it with:
+#   mkdir -p ~/.termux/boot && cp ~/exocortex/termux-boot/exocortex ~/.termux/boot/ && chmod +x ~/.termux/boot/exocortex
+termux-wake-lock
+sleep 10   # give Wi-Fi/mobile data a moment so ngrok can connect
+exec ~/exocortex/start.sh -d >> ~/exocortex/boot.log 2>&1
