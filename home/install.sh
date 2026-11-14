@@ -73,4 +73,4 @@ log "boot script installed at $BOOT/exocortex"
 
 echo
 bash "$HOME_DIR/services.sh" status
-echo "home page: http://localhost:8080/"
+echo "home page: http://localhost/"

@@ -2,8 +2,9 @@
 # $PREFIX/etc/nginx/exocortex.conf. Edit this file, not the generated one.
 
 server {
-    # Loopback only: other devices on the network can't reach it.
-    listen 127.0.0.1:8080 default_server;
+    # Loopback only: other devices on the network can't reach it. Port 80, so it's
+    # just http://localhost/ (Android lets apps bind 80).
+    listen 127.0.0.1:80 default_server;
     server_name localhost;
     absolute_redirect off;
     server_tokens off;
@@ -22,9 +23,9 @@ server {
 
     # PostgREST. Browsers send an Origin header on cross-site requests, so this only
     # lets the page itself (and tools that send no Origin, like curl) call the API: a
-    # website open in the phone's browser can't reach http://localhost:8080/api/.
+    # website open in the phone's browser can't reach http://localhost/api/.
     location /api/ {
-        if ($http_origin !~ "^(https?://(localhost|127\.0\.0\.1)(:8080)?)?$") {
+        if ($http_origin !~ "^(https?://(localhost|127\.0\.0\.1))?$") {
             return 403;
         }
         proxy_pass http://127.0.0.1:3000/;

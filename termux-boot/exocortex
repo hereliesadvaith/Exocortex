@@ -6,7 +6,7 @@ termux-wake-lock
 cd ~/exocortex || exit 1
 {
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') boot"
-  # Postgres, PostgREST, nginx: the home page at http://localhost:8080/
+  # Postgres, PostgREST, nginx: the home page at http://localhost/
   bash home/services.sh start
   # The MCP server and ngrok need the network; give Wi-Fi/mobile data a moment.
   sleep 10
