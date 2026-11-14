@@ -18,7 +18,7 @@ log() { echo "== $*"; }
 # ---- PL/Python (the schema's functions need it) -----------------------------------
 if [[ ! -f $(pg_config --pkglibdir)/plpython3.so ]]; then
   log "PL/Python isn't built yet; building it"
-  "$REPO/postgres/plpython/build.sh"
+  bash "$REPO/postgres/plpython/build.sh"
 fi
 
 # ---- PostgREST ----------------------------------------------------------------------

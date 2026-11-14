@@ -2,6 +2,13 @@
 # Termux:Boot runs this after the phone boots. home/install.sh installs it as
 # ~/.termux/boot/exocortex; to install it by hand:
 #   mkdir -p ~/.termux/boot && cp ~/exocortex/termux-boot/exocortex ~/.termux/boot/ && chmod 700 ~/.termux/boot/exocortex
+# Termux:Boot doesn't set the LD_PRELOAD a Termux shell has (termux-exec, which makes
+# "#!/usr/bin/env bash" and other /usr/bin paths work on Android). Without it,
+# everything started here, and every command the MCP server runs, couldn't execute
+# scripts directly.
+for lib in "$PREFIX/lib/libtermux-exec-ld-preload.so" "$PREFIX/lib/libtermux-exec.so"; do
+  if [ -f "$lib" ]; then export LD_PRELOAD="$lib"; break; fi
+done
 termux-wake-lock
 cd ~/exocortex || exit 1
 {

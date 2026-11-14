@@ -134,7 +134,7 @@ def update_and_restart(force_restart: bool = False) -> str:
     print(f"update_and_restart(force_restart={force_restart})", flush=True)
     with open(HERE / "update.log", "a") as log:
         subprocess.Popen(
-            ["bash", "-c", "sleep 2; exec ./start.sh update"],
+            ["bash", "-c", "sleep 2; exec bash ./start.sh update"],
             cwd=HERE,
             env=env,
             stdin=subprocess.DEVNULL,
