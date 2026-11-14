@@ -1,88 +1,50 @@
 # Exocortex
 
-A personal exocortex in your pocket: Postgres on Android (Termux), connected to AI assistants over MCP. Free, private, always on.
+An MCP server on your Android phone that gives an AI assistant a shell on it. It runs natively in Termux (no PRoot) and is published through an ngrok static domain. Only the GitHub usernames you allowlist can sign in.
 
 ```
 Claude / any MCP client
         │  HTTPS + GitHub OAuth
         ▼
-  ngrok static domain ──► FastMCP server (server.py, :8000) ──► PostgreSQL 17 (:5432)
-                          └──────────── Debian (proot-distro) inside Termux ────────────┘
+  ngrok static domain ──► ngrok agent ──► server.py (FastMCP, 127.0.0.1:8000) ──► bash
+                          └──────────────────── Termux ───────────────────────┘
 ```
 
-The server exposes one MCP tool, `query(sql)`, which runs any SQL statement against your database. Only the GitHub usernames you allowlist can sign in. Optionally it can also give the assistant a shell on the phone and let it update and restart the server itself (see [Shell and self-update](#shell-and-self-update)).
+| Tool | What it does |
+|---|---|
+| `shell(command, timeout_s=60, cwd=None)` | Runs a bash command as the Termux user, starting in `~` unless `cwd` is given. Returns the exit code and the last 50k characters of output. Every command is written to `server.log`. |
+| `update_and_restart(force_restart=False)` | Runs `./start.sh update` in the background: `git pull --ff-only`, reinstall requirements if they changed, restart the server. The connection drops for a few seconds. Without new commits it does nothing unless `force_restart` is true. Results go to `update.log`. |
+
+Everything else on the phone (databases, apps, backups) is built and run through `shell`; this repo is only the server.
 
 ## Requirements
 
-- An Android phone with [Termux](https://f-droid.org/packages/com.termux/) (install from F-Droid; the Play Store build is outdated)
-- A free [ngrok](https://ngrok.com) account (for an auth token and a free static domain)
+- [Termux](https://f-droid.org/packages/com.termux/) **and** [Termux:Boot](https://f-droid.org/packages/com.termux.boot/), both from F-Droid. Add-ons only work with a Termux from the same source, and the Google Play build has no Termux:Boot.
+- A free [ngrok](https://ngrok.com) account (auth token and a free static domain)
 - A GitHub account (for the OAuth app)
 
-## 1. Debian inside Termux
-
-In Termux:
+## 1. Termux packages
 
 ```sh
 pkg update && pkg upgrade
-pkg install proot-distro
-proot-distro install debian
-proot-distro login debian
+pkg install -y git python rust binutils python-cryptography
 ```
 
-Everything below runs **inside Debian** as root.
+FastMCP depends on a few packages written in Rust (`pydantic-core`, `rpds-py`, `watchfiles`) that have no ready-made Android builds, so pip compiles them on the phone. `rust` and `binutils` are for that; `python-cryptography` is Termux's prebuilt `cryptography`, which saves the longest compile.
 
-```sh
-apt update
-apt install -y postgresql postgresql-contrib python3 python3-venv gcc libc6-dev git curl
-```
-
-Optional, for writing database functions in Python (`plpython3u`):
-
-```sh
-apt install -y postgresql-plpython3-17
-```
-
-## 2. Make PostgreSQL work under PRoot
-
-PRoot doesn't support System V shared memory (`shmget` fails with `EIO`), so `initdb` and the server can't start as they are. `pgshm/fakeshm.c` is a small `LD_PRELOAD` shim that emulates the few SysV shm calls Postgres needs, using `mmap`.
-
-```sh
-gcc -O2 -shared -fPIC -o /usr/local/lib/libfakeshm.so pgshm/fakeshm.c
-```
-
-Create the cluster with the shim loaded, and make it permanent for the cluster:
-
-```sh
-mkdir -p /var/run/postgresql
-
-LD_PRELOAD=/usr/local/lib/libfakeshm.so pg_createcluster 17 main
-echo "LD_PRELOAD = '/usr/local/lib/libfakeshm.so'" >> /etc/postgresql/17/main/environment
-
-su postgres -c "pg_ctlcluster 17 main start"
-pg_lsclusters          # should show 17 main ... online
-```
-
-Start the cluster as the `postgres` user, not as root. Under PRoot, `chown` is a no-op and every file shows as owned by whichever user is looking, so as root the data directory looks root-owned and `pg_ctlcluster` refuses to start it. As `postgres`, the same directory looks owned by `postgres`. `start.sh` does this for you.
-
-Set a password for the database user the server will use:
-
-```sh
-su postgres -c "psql -c \"ALTER USER postgres PASSWORD 'choose-a-strong-password'\""
-```
-
-Optional extensions (in each database you use):
-
-```sh
-su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS plpython3u'"
-su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS jsonb_plpython3u CASCADE'"
-```
-
-## 3. ngrok
+## 2. ngrok
 
 1. Copy your auth token from the [ngrok dashboard](https://dashboard.ngrok.com/get-started/your-authtoken).
 2. Under **Domains**, claim your free static domain (something like `your-name.ngrok-free.dev`).
+3. Install the agent (the `ngrok` Python package has no Android build, so `start.sh` runs the agent binary instead):
 
-## 4. GitHub OAuth app
+```sh
+curl -LO https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
+tar xzf ngrok-v3-stable-linux-arm64.tgz -C $PREFIX/bin && rm ngrok-v3-stable-linux-arm64.tgz
+ngrok version
+```
+
+## 3. GitHub OAuth app
 
 Go to GitHub → Settings → Developer settings → [OAuth Apps](https://github.com/settings/developers) → **New OAuth App**:
 
@@ -93,13 +55,14 @@ Go to GitHub → Settings → Developer settings → [OAuth Apps](https://github
 
 Copy the **Client ID** and generate a **Client secret**.
 
-## 5. Install the server
+## 4. Install the server
 
 ```sh
-git clone https://github.com/hereliesadvaith/exocortex.git
-cd exocortex
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+git clone https://github.com/hereliesadvaith/exocortex.git ~/exocortex
+cd ~/exocortex
+python -m venv --system-site-packages .venv      # sees Termux's python-cryptography
+export ANDROID_API_LEVEL=$(getprop ro.build.version.sdk)   # needed to compile the Rust packages
+.venv/bin/pip install -r requirements.txt        # the first time takes a while
 ```
 
 Create your `.env` from the template and fill it in. It's gitignored, so keep it private:
@@ -107,45 +70,51 @@ Create your `.env` from the template and fill it in. It's gitignored, so keep it
 ```sh
 cp .env.example .env
 chmod 600 .env
-nano .env   # or any editor
+nano .env
 ```
-
-### All settings
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `POSTGRES_PASSWORD` | yes | none | Database password |
-| `POSTGRES_USER` / `POSTGRES_DB` | | `postgres` | Database user and name |
-| `POSTGRES_HOST` / `POSTGRES_PORT` | | `localhost` / `5432` | Database address |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | yes | none | OAuth app credentials |
 | `GITHUB_ALLOWED_USERS` | yes | none | Comma-separated GitHub usernames allowed to connect |
-| `NGROK_AUTHTOKEN` | | none | If set, `server.py` opens the ngrok tunnel itself |
-| `NGROK_DOMAIN` | yes* | none | Your static ngrok domain (*unless `MCP_BASE_URL` is set) |
+| `NGROK_AUTHTOKEN` | yes | none | ngrok auth token |
+| `NGROK_DOMAIN` | yes | none | Your static ngrok domain |
+| `NGROK_BIN` | | `ngrok` | Path to the ngrok binary, if it isn't on `PATH` |
 | `MCP_BASE_URL` | | `https://$NGROK_DOMAIN` | Public URL, if you use a different tunnel or proxy |
 | `MCP_HOST` / `MCP_PORT` | | `127.0.0.1` / `8000` | Where the server listens |
-| `QUERY_TIMEOUT_MS` | | `15000` | Statements running longer than this are cancelled |
-| `QUERY_MAX_ROWS` | | `500` | Maximum rows returned; extra rows are cut and a `{"truncated": true}` row is added |
-| `ENABLE_SHELL` | | off | `true` adds the `shell` and `update_and_restart` tools (see below) |
+| `SHELL_CWD` | | `~` | Where `shell` commands start when no `cwd` is given |
 
-## 6. Run it
+## 5. Run it
 
 ```sh
-./start.sh          # foreground (Ctrl+C to stop)
-./start.sh -d       # background, appends to server.log (rotated to server.log.1-3 at 1 MB)
-./start.sh stop     # stop the background server and the home page
-./start.sh restart  # stop, start in the background, wait until it answers
-./start.sh update   # git pull, then restart; rolls back if the new code doesn't start
-./start.sh status   # MCP server, tunnel, home page, nginx, Postgres, registered apps
-tail -f server.log
+./start.sh -d       # server and ngrok in the background
+./start.sh status   # is each one up, and the public URL
+./start.sh stop     # stop both
+./start.sh restart  # stop, then start both in the background
+./start.sh update   # git pull, then restart the server; rolls back if the new code doesn't start
+./start.sh          # ngrok in the background, server in the foreground (Ctrl+C stops the server)
+tail -f server.log ngrok.log
 ```
 
-`start.sh` also starts Postgres if it isn't running (it doesn't come back on its own after a phone restart), and takes a Termux wake lock when one is available.
+Logs are kept across restarts and rotated to `.1`–`.3` at 1 MB. `start.sh` takes a Termux wake lock so Android is less likely to kill it with the screen off.
 
 Check it's reachable. An unauthenticated request should get `401`:
 
 ```sh
 curl -s -o /dev/null -w "%{http_code}\n" -X POST https://<your-ngrok-domain>/mcp
 ```
+
+## 6. Start on boot
+
+Open the Termux:Boot app once (Android only lets it run at boot after that), then:
+
+```sh
+mkdir -p ~/.termux/boot
+cp ~/exocortex/termux-boot/exocortex ~/.termux/boot/
+chmod +x ~/.termux/boot/exocortex
+```
+
+After a reboot it waits 10 seconds for the network, then runs `./start.sh -d`; its output goes to `~/exocortex/boot.log`. Also set Android Settings → Apps → Termux (and Termux:Boot) → Battery → **Unrestricted**.
 
 ## 7. Connect an AI assistant
 
@@ -159,96 +128,26 @@ claude mcp add --transport http exocortex https://<your-ngrok-domain>/mcp
 
 Then run `/mcp` inside Claude Code to authenticate.
 
-## Home page and apps
+## How updates protect you
 
-Open **http://localhost/** in the phone's browser for the home page: an icon for each app on the phone, with a dot that says whether it's up, and below that the server's status:
-
-- **Services**: the MCP server, the ngrok tunnel (checked from outside at most once a minute), Postgres and nginx, with how long each has been up.
-- **Phone**: memory, storage and load average.
-- **Database**: size, version, and each schema's tables, views, approximate rows and size.
-- **Recent errors**: the last error lines from `server.log`, the home page's log and each app's log.
-
-It refreshes every 15 seconds while it's open, and only reads; starting and stopping stay with `start.sh`.
-
-```
-phone browser ──► nginx (127.0.0.1:80) ──┬─ /          ──► home/app.py (127.0.0.1:8003)
-                                         ├─ /habits/   ──► habits app (127.0.0.1:8001)
-                                         └─ /todos/    ──► todos app  (127.0.0.1:8002)
-```
-
-Setup is one package, then `start.sh` does the rest each time it starts the server:
-
-```sh
-apt install -y nginx
-```
-
-- `nginx/localhost.conf` is the only nginx site. `start.sh` links it in as `/etc/nginx/sites-enabled/exocortex` (replacing Debian's default site) and starts or reloads nginx.
-- `home/app.py` runs from this repo's `.venv` and `.env` (it reads Postgres with the same login as the MCP server), and logs to `home/home.log`. Set `HOME_PORT` in `.env` to move it off 8003.
-- If nginx or the home page fails to start, the MCP server still runs; `./start.sh status` shows what's down.
-
-Everything here listens on 127.0.0.1 only, so only apps on the phone can reach it. ngrok forwards to the MCP server's port alone, never to nginx or the home page.
-
-### Adding an app
-
-Each app lives in its own directory (habits on the `habits` branch in `/root/habits`, todos on the `todos` branch in `/root/todos`) with its own `start.sh`, and plugs in with two symlinks:
-
-| Link | Points to | Does |
-|---|---|---|
-| `/etc/nginx/localhost.d/<app>.conf` | the app's `nginx.conf`: `location` blocks for `/<app>/` | the localhost site includes it |
-| `/etc/exocortex/apps/<app>.json` | the app's `app.json` | the home page lists it |
-
-`app.json`:
-
-```json
-{
-  "name": "Todos",
-  "description": "Tasks & lists",
-  "path": "/todos/",
-  "health": "http://127.0.0.1:8002/api/state?done_days=1",
-  "color": "#3f5bb5",
-  "icon": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' ...>...</svg>",
-  "log": "todos.log"
-}
-```
-
-`health` is any URL that answers below 500 when the app is fine. `icon` is drawn white-on-`color` as an image, so it can't run script. `log` is relative to the app's directory, for **Recent errors**.
-
-## Shell and self-update
-
-Set `ENABLE_SHELL=true` in `.env` and restart to add two more tools:
-
-| Tool | What it does |
-|---|---|
-| `shell(command, timeout_s=60)` | Runs a bash command in the repo directory, as the user running `server.py` (root inside Debian; under PRoot that is still only the Termux app's rights). Returns the exit code and output. Every command is written to `server.log`. |
-| `update_and_restart(force_restart=False)` | Runs `./start.sh update` in the background: `git pull --ff-only` on the current branch, reinstall requirements if they changed, then restart. The connection drops for a few seconds. Without new commits it does nothing unless `force_restart` is true. Results go to `update.log`. |
-
-`./start.sh update` protects you from a bad pull:
-
-- It refuses to run if tracked files have uncommitted changes, so it never throws away local edits.
-- If the new `server.py` doesn't compile or its requirements don't install, it resets the code to the previous commit and leaves the running server alone.
-- If the new server doesn't answer on its port within 30 seconds, it resets to the previous commit and starts that again.
-
-With the shell enabled, anyone you allowlist can run commands on the phone and read `.env`. Only enable it if the allowlist is just you.
-
-## Keeping it alive on Android
-
-- Disable battery optimisation for Termux (Android Settings → Apps → Termux → Battery → Unrestricted).
-- Keep the Termux session open; `start.sh` runs `termux-wake-lock` when Termux exposes it. You can also run `termux-wake-lock` in Termux before `proot-distro login debian`.
-- After a reboot: open Termux → `proot-distro login debian` → `cd exocortex && ./start.sh -d`, then each app's `start.sh start` (`/root/habits/start.sh start`, `/root/todos/start.sh start`).
+- `./start.sh update` refuses to run if tracked files have uncommitted changes, so it never throws away local edits.
+- If the pull fails, or the new `server.py` doesn't compile, or its requirements don't install, the code is reset to the previous commit and the running server is left alone.
+- If the new server doesn't answer within 30 seconds, it resets to the previous commit and starts that again.
+- ngrok keeps running through an update, so only the server restarts.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `initdb` / Postgres fails with `could not create shared memory segment` or `EIO` | The shim isn't loaded. Check `/usr/local/lib/libfakeshm.so` exists and `/etc/postgresql/17/main/environment` has the `LD_PRELOAD` line. |
-| `Peer authentication failed for user "postgres"` | Run `psql` as the postgres user: `su postgres -c psql`. |
-| `KeyError: 'POSTGRES_PASSWORD'` (or another variable) on start | That variable is missing from `.env`. |
+| `pip install` fails building `pydantic-core` / `rpds-py` / `watchfiles` | Check `rust` and `binutils` are installed and `ANDROID_API_LEVEL` is exported in the same shell, then retry. |
+| `pip install` tries to build `cryptography` | The venv can't see Termux's package: recreate it with `--system-site-packages`. |
+| `ngrok.log` shows DNS errors like `lookup ... on [::1]:53` | The Linux ngrok binary looks for `/etc/resolv.conf`, which Android doesn't have. `pkg install proot`, then set `NGROK_BIN` to a wrapper script that runs `proot -b $PREFIX/etc/resolv.conf:/etc/resolv.conf ngrok "$@"`. |
+| `ngrok.log` says the domain is already in use | Another ngrok agent is still connected with that domain (an old session, or another device). Stop it, then `./start.sh restart`. |
+| `KeyError: 'GITHUB_CLIENT_ID'` (or another variable) on start | That variable is missing from `.env`. |
 | Every client gets `401` after signing in | Your GitHub username isn't in `GITHUB_ALLOWED_USERS`, or the callback URL in the OAuth app doesn't match your domain. |
-| `QueryCanceled: canceling statement due to statement timeout` | The query took longer than `QUERY_TIMEOUT_MS`. Speed it up or raise the limit. |
-| `Data directory /var/lib/postgresql/17/main must not be owned by root` | You started Postgres as root. Run `su postgres -c "pg_ctlcluster 17 main start"` instead (`chown` won't help under PRoot). |
-| `already running` from `start.sh` | Run `./start.sh stop` first. |
+| `server already running` from `start.sh` | Use `./start.sh restart`. |
 
 ## Security notes
 
-- Anyone you allowlist gets full read/write SQL access, with the rights of `POSTGRES_USER`. Using the `postgres` superuser is convenient but powerful: a superuser can run shell commands through `COPY ... PROGRAM`. For tighter safety, create a dedicated role that isn't a superuser, grant it only your tables, and use that in `.env`.
+- Anyone you allowlist can run any command on the phone with Termux's rights, including reading `.env`, so keep the allowlist to yourself.
 - Never commit `.env`. It holds your OAuth secret and ngrok token.

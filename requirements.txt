@@ -1,4 +1,2 @@
 fastmcp==4.1.6  # pinned: AllowlistedGitHubProvider relies on the "login" claim
-ngrok==1.7.0
-psycopg[binary]==3.3.8
 python-dotenv==1.2.4
