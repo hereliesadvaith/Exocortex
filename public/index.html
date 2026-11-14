@@ -98,6 +98,8 @@ main { padding-bottom: 110px; }
 .rounds .none { padding: 8px 0 10px; font: 11px/1.4 var(--mono); color: var(--muted); }
 .link { border: 0; background: transparent; padding: 4px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); }
 .open-url { margin-left: 8px; color: var(--red); text-decoration: none; }
+/* The headings take focus when a dialog opens (so the keyboard stays down); no ring on them. */
+dialog h2:focus { outline: none; }
 
 /* Toast with an action */
 .toast { display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; min-height: 42px; bottom: max(90px, calc(86px + env(safe-area-inset-bottom))); }
