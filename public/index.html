@@ -29,6 +29,7 @@ main { padding-bottom: 110px; }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; margin-bottom: 4px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 .chips .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; background: var(--card); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; padding: 8px 12px; }
+.chips .chip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
 .chips .chip .n { opacity: 0.6; }
 .chips .chip.new { border-style: dashed; background: transparent; }
 
