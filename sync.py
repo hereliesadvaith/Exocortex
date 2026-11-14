@@ -182,13 +182,16 @@ def datasets():
                unnest(string_to_array(nullif(t.genres, ''), ',')) gn join tvtime.genres g on g.name = gn
           on conflict do nothing;
 
+        -- Up to date, and new episodes have aired since: they're new.
+        update tvtime.series set status = 'new' where status = 'up_to_date' and total_episodes > episodes_watched;
+
         drop table tvtime.sync_titles, tvtime.sync_episodes;
         select (select count(*) from tvtime.movies where imdb_synced_at > now() - interval '1 hour'),
                (select count(*) from tvtime.series where imdb_synced_at > now() - interval '1 hour'),
-               (select count(*) from tvtime.series where status = 'up_to_date' and total_episodes > episodes_watched);
+               (select count(*) from tvtime.series where status = 'new');
     """)
     m, s, behind = stats[-1]
-    log(f"datasets: updated {m} movies and {s} series; {behind} up-to-date series have new episodes")
+    log(f"datasets: updated {m} movies and {s} series; {behind} series with new episodes")
 
 
 if __name__ == "__main__":

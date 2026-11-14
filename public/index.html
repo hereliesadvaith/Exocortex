@@ -264,8 +264,8 @@ function wcard(s) {
 
 function srow(s) {
   const b = behind(s);
-  const right = s.status === "up_to_date" && b ? `<span class="r new"><b class="new">${b}</b>new</span>`
-    : `<span class="r"><b>${s.episodes_watched}</b>${s.total_episodes != null && s.status !== "up_to_date" ? `of ${s.total_episodes}` : "eps"}</span>`;
+  const right = (s.status === "up_to_date" || s.status === "new") && b ? `<span class="r new"><b class="new">${b}</b>new</span>`
+    : `<span class="r"><b>${s.episodes_watched}</b>${s.total_episodes != null && s.status !== "up_to_date" && s.status !== "new" ? `of ${s.total_episodes}` : "eps"}</span>`;
   return `<button class="row" data-series="${s.id}">${poster(s, 120)}
     <span class="info"><span class="t">${esc(s.title)}</span><span class="meta" style="display:block">${esc([years(s), genres(s)].filter(Boolean).join(" · "))}</span></span>
     ${right}</button>`;
@@ -277,7 +277,7 @@ const tile = (x, kind) => `<button class="tile" data-${kind}="${x.id}">
 
 function renderSeries() {
   const by = st => S.series.filter(s => s.status === st);
-  const fresh = by("new").sort((a, b) => a.title.localeCompare(b.title));
+  const fresh = by("new").sort((a, b) => behind(b) - behind(a) || a.title.localeCompare(b.title));
   const watching = by("watching").sort((a, b) => (b.last_watched_on || "") < (a.last_watched_on || "") ? -1 : 1);
   // Up to date with new episodes out first.
   const upToDate = by("up_to_date").sort((a, b) => behind(b) - behind(a) || a.title.localeCompare(b.title));

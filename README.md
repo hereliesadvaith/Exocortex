@@ -1,6 +1,6 @@
 # TV Time
 
-Movies and series you watch, on the phone: new series you haven't started, what you're watching with a +1 per episode, what you're up to date on (and when new episodes are out), paused and finished series, every movie by the month you watched it, and a watchlist. Titles are IMDb titles: add them by searching IMDb by name, or with an IMDb link. It opens at **http://localhost/tvtime/**, and has a tile on the exocortex home page at http://localhost/.
+Movies and series you watch, on the phone: series with new episodes out, what you're watching with a +1 per episode, what you're up to date on (and when new episodes are out), paused and finished series, every movie by the month you watched it, and a watchlist. Titles are IMDb titles: add them by searching IMDb by name, or with an IMDb link. It opens at **http://localhost/tvtime/**, and has a tile on the exocortex home page at http://localhost/.
 
 ```
 phone browser ──► nginx (127.0.0.1:80) ─┬─ /tvtime/  ──► public/ (static page)

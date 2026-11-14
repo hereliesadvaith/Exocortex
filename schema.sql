@@ -3,7 +3,7 @@
 --
 -- tvtime.movies        one row per movie: watchlist or watched (with the date and
 --                      how many times rewatched).
--- tvtime.series        one row per series: watchlist, new (not started yet), watching,
+-- tvtime.series        one row per series: watchlist, new (new episodes out), watching,
 --                      up_to_date, paused or finished, with episodes watched out of the total.
 -- tvtime.genres        IMDb's genres; movie_genres / series_genres link titles to them.
 --
