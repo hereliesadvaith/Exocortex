@@ -13,7 +13,6 @@ the local socket). Safe to run again. IMDb's datasets are for personal and
 non-commercial use.
 """
 import csv
-import datetime
 import gzip
 import io
 import json
@@ -124,28 +123,29 @@ def datasets():
     series_ids = {i for i, k in ours.items() if k == "series"}
     log(f"datasets: {len(ours)} titles ({len(series_ids)} series)")
 
-    # 1. Every episode of our series.
+    # 1. The regular episodes of our series: numbered, in a season (IMDb also lists
+    #    specials, recaps and shorts without a season or episode number, or in season 0).
     episode_parent = {}
     for r in stream_tsv("title.episode.tsv.gz"):
-        if r["parentTconst"] in series_ids:
+        if r["parentTconst"] in series_ids and (num(r["seasonNumber"]) or 0) >= 1 and num(r["episodeNumber"]) is not None:
             episode_parent[r["tconst"]] = r["parentTconst"]
     log(f"  {len(episode_parent)} episodes of your series")
 
-    # 2. Our titles' genres, runtime and years; our episodes' years.
-    this_year = datetime.date.today().year
+    # 2. Which have aired. The datasets have no air dates, only years, and IMDb lists
+    #    episodes before they air; an episode has votes only once people have seen it.
+    rated = {r["tconst"] for r in stream_tsv("title.ratings.tsv.gz") if r["tconst"] in episode_parent}
+    log(f"  {len(rated)} of them aired (rated)")
+
+    # 3. Our titles' genres, runtime and years.
     titles, aired = [], {}
     for r in stream_tsv("title.basics.tsv.gz"):
         t = r["tconst"]
         if t in ours:
             titles.append((t, num(r["startYear"]), num(r["endYear"]), num(r["runtimeMinutes"]),
                            "" if r["genres"] == "\\N" else r["genres"]))
-        elif t in episode_parent:
-            year = num(r["startYear"])
-            # Aired: has a year, and it isn't in the future. (IMDb lists announced
-            # episodes without one.)
-            if year is not None and year <= this_year:
-                p = episode_parent[t]
-                aired[p] = aired.get(p, 0) + 1
+        elif t in rated and r["titleType"] == "tvEpisode":
+            p = episode_parent[t]
+            aired[p] = aired.get(p, 0) + 1
     log(f"  found {len(titles)} of your {len(ours)} titles")
 
     psql("""
@@ -171,7 +171,8 @@ def datasets():
 
         update tvtime.series s set runtime_min = t.runtime, end_year = t.end_year,
                year = coalesce(s.year, t.start_year), imdb_synced_at = now(),
-               total_episodes = coalesce(e.aired, s.total_episodes)
+               -- Never below what you've watched: TV Time and IMDb sometimes split episodes differently.
+               total_episodes = greatest(coalesce(e.aired, s.total_episodes), s.episodes_watched)
           from tvtime.sync_titles t left join tvtime.sync_episodes e on e.imdb_id = t.imdb_id
           where t.imdb_id = s.imdb_id;
         delete from tvtime.series_genres sg using tvtime.series s, tvtime.sync_titles t
