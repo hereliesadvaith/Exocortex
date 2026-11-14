@@ -56,11 +56,24 @@ def load_tsv(rows, table, columns):
 
 # ---- posters ------------------------------------------------------------------------
 
+def save_posters(found):
+    """Write a batch of (table, imdb_id, url) to the database."""
+    if not found:
+        return
+    psql("create table if not exists tvtime.sync_posters (kind text, imdb_id text, url text); truncate tvtime.sync_posters")
+    load_tsv(found, "tvtime.sync_posters", ["kind", "imdb_id", "url"])
+    psql("""
+        update tvtime.movies m set poster_url = p.url from tvtime.sync_posters p where p.kind = 'movies' and p.imdb_id = m.imdb_id;
+        update tvtime.series s set poster_url = p.url from tvtime.sync_posters p where p.kind = 'series' and p.imdb_id = s.imdb_id;
+        drop table tvtime.sync_posters;
+    """)
+
+
 def posters():
     todo = psql("select 'movies', imdb_id from tvtime.movies where poster_url is null and imdb_id is not null "
                 "union all select 'series', imdb_id from tvtime.series where poster_url is null and imdb_id is not null")
     log(f"posters: {len(todo)} titles without one")
-    found = []
+    batch, saved = [], 0
     for n, (table, imdb_id) in enumerate(todo, 1):
         url = None
         try:
@@ -73,18 +86,15 @@ def posters():
         except Exception as e:
             log(f"  {imdb_id}: {type(e).__name__}")
         if url:
-            found.append((table, imdb_id, url))
-        if n % 50 == 0:
-            log(f"  {n}/{len(todo)}, {len(found)} found")
+            batch.append((table, imdb_id, url))
+        # Save as it goes, so posters show up on the page during a long run.
+        if n % 50 == 0 or n == len(todo):
+            save_posters(batch)
+            saved += len(batch)
+            batch = []
+            log(f"  {n}/{len(todo)}, {saved} saved")
         time.sleep(0.25)   # be gentle: this is IMDb's search box endpoint
-    psql("create table if not exists tvtime.sync_posters (kind text, imdb_id text, url text); truncate tvtime.sync_posters")
-    load_tsv(found, "tvtime.sync_posters", ["kind", "imdb_id", "url"])
-    psql("""
-        update tvtime.movies m set poster_url = p.url from tvtime.sync_posters p where p.kind = 'movies' and p.imdb_id = m.imdb_id;
-        update tvtime.series s set poster_url = p.url from tvtime.sync_posters p where p.kind = 'series' and p.imdb_id = s.imdb_id;
-        drop table tvtime.sync_posters;
-    """)
-    log(f"posters: {len(found)} of {len(todo)} saved")
+    log(f"posters: {saved} of {len(todo)} saved")
 
 
 # ---- datasets -----------------------------------------------------------------------
