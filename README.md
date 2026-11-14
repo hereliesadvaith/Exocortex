@@ -1,6 +1,6 @@
 # TV Time
 
-Movies and series you watch, on the phone: series with new episodes out, what you're watching with a +1 per episode, what you're up to date on (and when new episodes are out), paused and finished series, every movie by the month you watched it, and a watchlist. Titles are IMDb titles: add them by searching IMDb by name, or with an IMDb link. It opens at **http://localhost/tvtime/**, and has a tile on the exocortex home page at http://localhost/.
+Movies and series you watch, on the phone: what you're watching with a +1 per episode, what you're up to date on (and when new episodes are out), paused and finished series, every movie by the month you watched it, and a watchlist. Titles are IMDb titles: add them by searching IMDb by name, or with an IMDb link. It opens at **http://localhost/tvtime/**, and has a tile on the exocortex home page at http://localhost/.
 
 ```
 phone browser ──► nginx (127.0.0.1:80) ─┬─ /tvtime/  ──► public/ (static page)
@@ -43,7 +43,7 @@ An episode counts as aired when IMDb gives it a year that isn't in the future (a
 | | |
 |---|---|
 | `tvtime.movies` | `imdb_id`, `title`, `year`, `status` (`watchlist` or `watched`), `watched_on`, `rewatch_count`, `runtime_min`, `poster_url` |
-| `tvtime.series` | `imdb_id`, `title`, `year`, `end_year` (null while running), `status` (`watchlist`, `new`, `watching`, `up_to_date`, `paused`, `finished`), `episodes_watched`, `total_episodes`, `last_watched_on`, `runtime_min` (per episode), `poster_url` |
+| `tvtime.series` | `imdb_id`, `title`, `year`, `end_year` (null while running), `status` (`watchlist`, `watching`, `up_to_date`, `paused`, `finished`), `episodes_watched`, `total_episodes`, `last_watched_on`, `runtime_min` (per episode), `poster_url` |
 | `tvtime.genres`, `tvtime.movie_genres`, `tvtime.series_genres` | IMDb's genres and which titles have them |
 
 ## API
@@ -56,7 +56,7 @@ The page calls these through PostgREST at `/api/rpc/<function>` with the header 
 | `search(q)` (GET) | Up to 8 IMDb movies and series for a name, id or IMDb link, with poster links and whether each is already in your lists |
 | `add_movie(imdb_id, title, year, poster_url, status = 'watched', watched_on)` | A watched movie without a date is watched today |
 | `add_series(imdb_id, title, year, poster_url, status = 'watching', episodes_watched = 0)` | |
-| `episode(series_id, delta = 1)` | One more (or fewer) episode. Reaching the total marks it finished (ended) or up to date (still running); watching again moves a new, paused, up-to-date or watchlist series to watching. |
+| `episode(series_id, delta = 1)` | One more (or fewer) episode. Reaching the total marks it finished (ended) or up to date (still running); watching again moves a paused, up-to-date or watchlist series to watching. |
 | `rewatch(movie_id)` | One more rewatch |
 | `update_movie(movie_id, patch)`, `update_series(series_id, patch)` | `patch`: the fields to change |
 | `delete_movie(movie_id)`, `delete_series(series_id)` | |

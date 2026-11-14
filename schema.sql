@@ -3,8 +3,8 @@
 --
 -- tvtime.movies        one row per movie: watchlist or watched (with the date and
 --                      how many times rewatched).
--- tvtime.series        one row per series: watchlist, new (new episodes out), watching,
---                      up_to_date, paused or finished, with episodes watched out of the total.
+-- tvtime.series        one row per series: watchlist, watching, up_to_date, paused or
+--                      finished, with episodes watched out of the total.
 -- tvtime.genres        IMDb's genres; movie_genres / series_genres link titles to them.
 --
 -- Titles are identified by their IMDb id (tt...). Genres, runtime, end year and
@@ -44,7 +44,7 @@ create table if not exists tvtime.series (
     year smallint,
     end_year smallint,               -- null: still running (or unknown)
     status text not null default 'watching' check (status in
-        ('watchlist', 'new', 'watching', 'up_to_date', 'paused', 'finished')),
+        ('watchlist', 'watching', 'up_to_date', 'paused', 'finished')),
     episodes_watched integer not null default 0 check (episodes_watched >= 0),
     total_episodes integer check (total_episodes >= 0),   -- aired episodes, from IMDb
     last_watched_on date,
@@ -54,10 +54,10 @@ create table if not exists tvtime.series (
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
--- The status list grew ('new'); existing tables get the current check.
+-- Existing tables get the current status list (create table if not exists won't).
 alter table tvtime.series drop constraint if exists series_status_check;
 alter table tvtime.series add constraint series_status_check check (status in
-    ('watchlist', 'new', 'watching', 'up_to_date', 'paused', 'finished'));
+    ('watchlist', 'watching', 'up_to_date', 'paused', 'finished'));
 
 
 create table if not exists tvtime.movie_genres (
@@ -228,7 +228,7 @@ end $$;
 
 -- Watched one more (delta 1) or one fewer (-1) episode. Reaching the total marks
 -- the series finished (it has ended) or up to date (still running); watching
--- again moves a watchlist / new / paused / up-to-date series to watching.
+-- again moves a watchlist / paused / up-to-date series to watching.
 create or replace function tvtime.episode(series_id int, delta int default 1) returns jsonb
 language plpgsql security definer
 set search_path = pg_catalog, tvtime
@@ -248,7 +248,7 @@ begin
     status = case
       when t.total_episodes is not null and watched >= t.total_episodes and t.total_episodes > 0
         then case when t.end_year is not null then 'finished' else 'up_to_date' end
-      when delta > 0 and t.status in ('watchlist', 'new', 'paused', 'up_to_date', 'finished') then 'watching'
+      when delta > 0 and t.status in ('watchlist', 'paused', 'up_to_date', 'finished') then 'watching'
       when delta < 0 and t.status in ('up_to_date', 'finished') then 'watching'
       else t.status end
   where t.id = s.id
