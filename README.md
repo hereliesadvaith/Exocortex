@@ -24,7 +24,7 @@ phone browser ──► nginx 127.0.0.1:80               │
 | Path | What |
 |---|---|
 | `server.py`, `start.sh`, `ngrok.yml` | MCP server and its ngrok tunnel |
-| `home/` | Home page: static files, `schema.sql`, `install.sh`, `services.sh`, nginx template |
+| `home/` | Home page: static files (and `/ui.css`, `/ui.js` for apps), `schema.sql`, `install.sh`, `services.sh`, `sync-api.sh`, nginx template |
 | `postgres/plpython/` | Builds PL/Python for Termux's Postgres |
 | `termux-boot/exocortex` | Starts everything after a reboot |
 
@@ -182,7 +182,7 @@ It refreshes every 5 seconds while it's open (every second while switching). Lig
 ### How it works
 
 - **nginx** (`127.0.0.1:80`) serves `home/public/` and proxies `/api/` to PostgREST. Android lets apps listen on port 80 (not on most low ports, such as 53). nginx only listens on loopback, and `/api/` rejects requests whose `Origin` isn't `localhost`, so a website open in the phone's browser can't call it.
-- **PostgREST** (`127.0.0.1:3000`) logs in over the local socket as `home_api` and serves schema `home` as `home_web`, which can only read `home.apps` and call two functions.
+- **PostgREST** (`127.0.0.1:3000`) logs in over the local socket as `home_api` and serves schema `home` (plus each app's schema, see below) as `home_web`, which in `home` can only read `home.apps` and call two functions.
 - **`home.status()`** and **`home.mcp_set(enabled)`** are PL/Python `SECURITY DEFINER` functions, so they run as the Termux user: they read `/proc`, PID files and logs, and `mcp_set` runs `start.sh -d` or `stop` detached. Only one switch runs at a time.
 
 | Endpoint | |
@@ -197,20 +197,29 @@ Android doesn't let apps read load, uptime, CPU, battery or temperature, so the 
 
 ### Adding a custom app
 
-Each app lives on its own branch with its own `start.sh`, and plugs in with two things:
+Apps live on their own branches (`habits`, `todos`, `jobs`, ...), checked out at `~/apps/<app>`, and run no process of their own:
 
-1. **nginx:** a file in `$PREFIX/etc/nginx/apps.d/<app>.conf` with its `location /<app>/ { proxy_pass http://127.0.0.1:<port>/; }` blocks, then `nginx -s reload`.
-2. **Home page:** a row in `home.apps`:
+| Part | Where |
+|---|---|
+| Data and logic | Schema `<app>` in Postgres: tables, views, and functions the page calls |
+| API | PostgREST at `/api/`, the page picking its schema with `Accept-Profile` / `Content-Profile: <app>` |
+| Page | Static files in the app's `public/`, served by nginx at `http://localhost/<app>/` |
+| Look | `/ui.css` and `/ui.js` from this repo: tokens, fonts, components, theme, and `exo.rpc(schema, fn, args)` |
+
+An app's `install.sh`:
+
+1. applies its `schema.sql` and grants `home_web` what the page needs in that schema;
+2. writes `$PREFIX/etc/nginx/apps.d/<app>.conf` (`location /<app>/ { alias ~/apps/<app>/public/; }`) and reloads nginx;
+3. registers itself in `home.apps` with `api_schema = '<app>'`, and runs `bash ~/exocortex/home/sync-api.sh` so PostgREST serves the new schema (no restart).
 
 ```sql
-insert into home.apps (id, name, description, path, health_url, log_file, icon)
-values ('habits', 'Habits', 'Daily habits', '/habits/', 'http://127.0.0.1:8001/health',
-        '/data/data/com.termux/files/home/habits/habits.log', '<svg ...>...</svg>')
-on conflict (id) do update set name = excluded.name, path = excluded.path,
-  health_url = excluded.health_url, log_file = excluded.log_file, icon = excluded.icon;
+insert into home.apps (id, name, description, path, health_url, icon, api_schema)
+values ('habits', 'Habits', 'Streaks & check-ins', '/habits/', 'http://127.0.0.1/habits/', '<svg ...>...</svg>', 'habits')
+on conflict (id) do update set name = excluded.name, description = excluded.description, path = excluded.path,
+  health_url = excluded.health_url, icon = excluded.icon, api_schema = excluded.api_schema;
 ```
 
-`health_url` counts as up for any answer below 500; `icon` is an SVG drawn in the page's text colour (as a mask, so it can't run script); `log_file` feeds the error list.
+`health_url` counts as up for any answer below 500; `icon` is an SVG drawn in the page's text colour (as a mask, so it can't run script); `log_file` (optional) feeds the error list. To remove an app: delete its row, run `home/sync-api.sh`, delete its `apps.d` file and reload nginx, and drop its schema if you don't want the data.
 
 ## 5. Start on boot
 

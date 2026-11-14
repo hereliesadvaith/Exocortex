@@ -1,90 +1,4 @@
-/* Exocortex home: monochrome, dot-matrix display type, one red accent. */
-
-@font-face {
-  font-family: "Doto";
-  src: url("fonts/doto.woff2") format("woff2");
-  font-weight: 100 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Space Mono";
-  src: url("fonts/spacemono-400.woff2") format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Space Mono";
-  src: url("fonts/spacemono-700.woff2") format("woff2");
-  font-weight: 700;
-  font-display: swap;
-}
-
-:root {
-  --bg: #f0f0ee;
-  --card: #ffffff;
-  --text: #0b0b0b;
-  --muted: #74746f;
-  --line: #e2e2de;
-  --dot-off: #dcdcd7;
-  --grid: rgba(0, 0, 0, 0.07);
-  --red: #d71921;
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
-  --radius: 26px;
-  --display: "Doto", "Space Mono", ui-monospace, monospace;
-  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #000000;
-    --card: #111111;
-    --text: #f2f2f0;
-    --muted: #8b8b86;
-    --line: #232323;
-    --dot-off: #2a2a2a;
-    --grid: rgba(255, 255, 255, 0.07);
-    --shadow: none;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #000000;
-  --card: #111111;
-  --text: #f2f2f0;
-  --muted: #8b8b86;
-  --line: #232323;
-  --dot-off: #2a2a2a;
-  --grid: rgba(255, 255, 255, 0.07);
-  --shadow: none;
-  color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background-color: var(--bg);
-  background-image: radial-gradient(var(--grid) 1px, transparent 1.2px);
-  background-size: 14px 14px;
-  color: var(--text);
-  font: 15px/1.45 var(--sans);
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-}
-main {
-  overflow-x: clip;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
-}
-button { font: inherit; color: inherit; }
-a { color: inherit; text-decoration: none; }
-
-.display { font-family: var(--display); font-weight: 800; letter-spacing: 0.02em; margin: 0; }
-.mono { font-family: var(--mono); }
-.muted { color: var(--muted); }
-.small { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+/* Exocortex home page. Shared tokens, fonts and components are in /ui.css. */
 
 /* ---- header ---- */
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 8px 0 26px; }
@@ -104,24 +18,6 @@ a { color: inherit; text-decoration: none; }
 
 /* ---- section labels ---- */
 section { margin-bottom: 30px; }
-.label {
-  display: flex; align-items: center; gap: 10px; margin: 0 4px 12px;
-  font: 700 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
-}
-.label .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
-.label .count { margin-left: auto; color: var(--muted); font-weight: 400; }
-
-.card {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 20px; box-shadow: var(--shadow);
-}
-
-/* ---- status dots ---- */
-.st { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text); }
-.st.down { background: var(--red); }
-.st.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
-.st.wait { background: var(--red); animation: blink 0.9s steps(2, start) infinite; }
-@keyframes blink { to { visibility: hidden; } }
 
 /* ---- apps ---- */
 .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 14px 12px; }
@@ -222,20 +118,8 @@ section { margin-bottom: 30px; }
 /* ---- misc ---- */
 .banner { margin: -10px 0 22px; padding: 12px 16px; border-radius: 16px; border: 1.5px solid var(--red); color: var(--red); font: 12px/1.4 var(--mono); }
 footer { display: flex; justify-content: space-between; gap: 12px; padding: 4px 4px 0; }
-.toast {
-  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%);
-  max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 999px;
-  background: var(--text); color: var(--bg); font-size: 12px; z-index: 10;
-}
-.skeleton { background: var(--line); border-radius: 14px; animation: pulse 1.4s ease-in-out infinite; }
-.skeleton.tile { aspect-ratio: 1; border-radius: 24px; }
-.skeleton.line { height: 18px; margin: 10px 0; }
-@keyframes pulse { 50% { opacity: 0.45; } }
 
 @media (min-width: 640px) {
   .apps { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .stats { grid-template-columns: repeat(4, 1fr); }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
 }

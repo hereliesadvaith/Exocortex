@@ -1,0 +1,205 @@
+/* Exocortex shared styles: tokens, fonts and components for the home page and
+   every app under http://localhost/<app>/. Monochrome, dot-matrix display type,
+   one red accent; light and dark follow the system or the home page's toggle
+   (data-theme on <html>, set by /ui.js or the home page). */
+
+@font-face {
+  font-family: "Doto";
+  src: url("/fonts/doto.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("/fonts/spacemono-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Space Mono";
+  src: url("/fonts/spacemono-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --bg: #f0f0ee;
+  --card: #ffffff;
+  --text: #0b0b0b;
+  --muted: #74746f;
+  --line: #e2e2de;
+  --dot-off: #dcdcd7;
+  --grid: rgba(0, 0, 0, 0.07);
+  --red: #d71921;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+  --radius: 26px;
+  --display: "Doto", "Space Mono", ui-monospace, monospace;
+  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --card: #111111;
+    --text: #f2f2f0;
+    --muted: #8b8b86;
+    --line: #232323;
+    --dot-off: #2a2a2a;
+    --grid: rgba(255, 255, 255, 0.07);
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --card: #111111;
+  --text: #f2f2f0;
+  --muted: #8b8b86;
+  --line: #232323;
+  --dot-off: #2a2a2a;
+  --grid: rgba(255, 255, 255, 0.07);
+  --shadow: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+  color: var(--text);
+  font: 15px/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+main {
+  overflow-x: clip;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+}
+button { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.display { font-family: var(--display); font-weight: 800; letter-spacing: 0.02em; margin: 0; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.small { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.label {
+  display: flex; align-items: center; gap: 10px; margin: 0 4px 12px;
+  font: 700 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+}
+.label .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.label .count { margin-left: auto; color: var(--muted); font-weight: 400; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; box-shadow: var(--shadow);
+}
+
+/* ---- status dots ---- */
+.st { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text); }
+.st.down { background: var(--red); }
+.st.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.st.wait { background: var(--red); animation: blink 0.9s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+.toast {
+  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 999px;
+  background: var(--text); color: var(--bg); font-size: 12px; z-index: 10;
+}
+
+.skeleton { background: var(--line); border-radius: 14px; animation: pulse 1.4s ease-in-out infinite; }
+.skeleton.tile { aspect-ratio: 1; border-radius: 24px; }
+.skeleton.line { height: 18px; margin: 10px 0; }
+@keyframes pulse { 50% { opacity: 0.45; } }
+
+/* ---- for apps (custom apps under /<app>/ load this file too) ---------------- */
+[hidden] { display: none !important; }
+input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* Header: back to Home, dot-matrix title, a mono line under it, an optional right side. */
+.app-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin: 4px 0 22px; }
+.app-top h1 { font: 800 clamp(34px, 10vw, 50px)/0.95 var(--display); letter-spacing: 0.02em; margin: 0; text-transform: uppercase; }
+.app-top .sub { margin: 8px 0 0; font: 12px/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.app-top .side { text-align: right; flex: none; }
+.app-top .side .big { font: 800 30px/1 var(--display); }
+.app-top .side .small { display: block; margin-top: 4px; color: var(--muted); }
+.back {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  font: 700 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+}
+.back::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+
+/* Segmented control, e.g. Today / History. */
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); margin-bottom: 16px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 9px 8px; border-radius: 999px; font: 700 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--text); color: var(--bg); }
+
+/* Buttons */
+.btn { border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; background: transparent; font: 700 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.btn.primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+.btn.danger { border-color: transparent; color: var(--red); padding-left: 8px; padding-right: 8px; }
+.btn.plain { border-color: transparent; color: var(--muted); padding-left: 8px; padding-right: 8px; }
+.btn:disabled { opacity: 0.45; }
+.icon-btn { border: 0; background: transparent; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.icon-btn:active { background: var(--line); }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font: 12px/1 var(--mono); }
+.chip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+/* The round "+" in the corner. */
+.fab {
+  position: fixed; right: max(16px, calc(50% - 364px)); bottom: max(20px, calc(16px + env(safe-area-inset-bottom)));
+  width: 58px; height: 58px; border-radius: 50%; border: 0; z-index: 5;
+  background: var(--text); color: var(--bg); display: grid; place-items: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.fab::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+
+/* Forms and dialogs */
+dialog {
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 0; width: min(440px, calc(100vw - 32px));
+  background: var(--card); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+dialog form { padding: 22px; display: grid; gap: 16px; }
+dialog h2 { margin: 0; font: 800 26px/1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; }
+dialog .sub { margin-top: -8px; font: 12px/1.4 var(--mono); color: var(--muted); }
+.field, form label:not(.plain) { display: grid; gap: 7px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--bg); font: 15px/1.3 var(--sans); letter-spacing: normal; text-transform: none; color: var(--text);
+}
+input:focus, select:focus, textarea:focus { outline: 1.5px solid var(--text); outline-offset: -1px; }
+textarea { resize: vertical; min-height: 70px; }
+input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--text); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+.seg label { display: block; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
+.seg span { display: block; text-align: center; padding: 9px 4px; border-radius: 999px; font: 700 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.seg input:checked + span { background: var(--text); color: var(--bg); }
+.seg input:focus-visible + span { outline: 1.5px solid var(--red); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.actions .left { margin-right: auto; display: flex; gap: 2px; }
+
+/* Empty state */
+.empty-state { border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
+.empty-state .display { font-size: 22px; text-transform: uppercase; }
+.empty-state p { margin: 8px 0 0; font: 11px/1.5 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+/* Section heading inside a page (same look as the home page's labels). */
+.section-title { display: flex; align-items: center; gap: 10px; margin: 26px 4px 12px; font: 700 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
+.section-title::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.section-title .count { margin-left: auto; color: var(--muted); font-weight: 400; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -40,8 +40,30 @@ create table if not exists home.apps (
   sort        int not null default 100,
   created_at  timestamptz not null default now()
 );
+alter table home.apps add column if not exists api_schema text;   -- the app's schema, if it has an API
 revoke all on home.apps from public;
 grant select on home.apps to home_web;
+
+-- PostgREST serves "home" plus every registered app's schema. App installers call
+-- this after changing home.apps (home/sync-api.sh does it and then reloads
+-- PostgREST's schema cache). The list is stored as a setting on home_api, which
+-- PostgREST reads on "reload config"; it overrides PGRST_DB_SCHEMAS.
+create or replace function home.sync_api_schemas() returns text
+language plpgsql
+set search_path = pg_catalog, home
+as $$
+declare
+  schemas text;
+begin
+  select string_agg(s, ',' order by first, s) into schemas
+  from (select 'home' as s, 0 as first
+        union
+        select distinct api_schema, 1 from home.apps where api_schema is not null) x;
+  execute format('alter role home_api set pgrst.db_schemas = %L', schemas);
+  perform pg_notify('pgrst', 'reload config');
+  return schemas;
+end $$;
+revoke all on function home.sync_api_schemas() from public;
 
 -- ---- status ---------------------------------------------------------------------
 create or replace function home.status() returns jsonb
