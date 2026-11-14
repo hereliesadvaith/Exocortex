@@ -3,186 +3,116 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141517" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f0f0ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Jobs</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8621b'/%3E%3Crect x='7' y='11' width='18' height='13' rx='2.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M12.5 11V9.5a2 2 0 012-2h3a2 2 0 012 2V11' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23d71921'/%3E%3C/svg%3E">
+<link rel="preload" href="/fonts/doto.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/ui.css">
+<script src="/ui.js"></script>
 <style>
-:root {
-  --bg: #f5f5f2;
-  --surface: #ffffff;
-  --surface-2: #ecece8;
-  --text: #1b1c1e;
-  --muted: #6a6c70;
-  --line: #e0e0db;
-  --accent: #b8621b;
-  --accent-soft: #f6e4d4;
-  --accent-text: #ffffff;
-  --danger: #c0392b;
-  --ok: #2f8a4f;
-  --warn: #b7791f;
-  --s-wishlist: #8a8d93;
-  --s-applied: #3f7fd1;
-  --s-screening: #1f8f8a;
-  --s-interviewing: #7b55c7;
-  --s-offer: #2f8a4f;
-  --s-accepted: #1f7a3f;
-  --s-rejected: #c0392b;
-  --s-withdrawn: #8a8d93;
-  --s-ghosted: #9a7b5f;
-  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141517;
-    --surface: #1d1e21;
-    --surface-2: #28292d;
-    --text: #ebebee;
-    --muted: #9a9ba1;
-    --line: #2e2f33;
-    --accent: #e89a55;
-    --accent-soft: #4a3220;
-    --accent-text: #1f1206;
-    --danger: #ec7a6c;
-    --ok: #5fc27f;
-    --warn: #e0a84c;
-    --s-wishlist: #9a9ba1;
-    --s-applied: #6ea6ec;
-    --s-screening: #4fc4be;
-    --s-interviewing: #a98be8;
-    --s-offer: #5fc27f;
-    --s-accepted: #5fc27f;
-    --s-rejected: #ec7a6c;
-    --s-withdrawn: #9a9ba1;
-    --s-ghosted: #c4a283;
-    --shadow: none;
-    color-scheme: dark;
-  }
-}
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-tap-highlight-color: transparent;
-}
-button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-.wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 96px; }
+main { padding-bottom: 110px; }
 
-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-h1 { font-size: 28px; line-height: 1.1; margin: 0; letter-spacing: -.02em; }
-.sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
-.notice { border: 0; background: var(--accent-soft); border-radius: 14px; padding: 8px 12px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.25; }
-.notice b { display: block; font-size: 20px; color: var(--text); }
-.notice.set { background: var(--surface-2); }
+/* Notice period, top right: tap to edit the profile. */
+.notice { border: 0; background: transparent; padding: 0; text-align: right; flex: none; }
+.notice .big { display: block; font: 800 28px/1 var(--display); }
+.notice .small { display: block; margin-top: 4px; color: var(--muted); }
+.notice.set .big { color: var(--muted); }
+.notice.last .big, .notice.free .big { color: var(--red); }
 
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); }
-.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.stat span { font-size: 12px; color: var(--muted); }
-.stat.hot b { color: var(--s-offer); }
+/* Active / this week / offers */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-bottom: 14px; background: var(--line); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.stats .stat { background: var(--card); padding: 12px 14px; }
+.stats b { display: block; font: 800 26px/1 var(--display); }
+.stats span { display: block; margin-top: 5px; font: 10px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stats .hot b { color: var(--red); }
 
-.search { position: relative; margin-bottom: 14px; }
-.search .mag { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.search input { padding: 12px 44px 12px 42px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); -webkit-appearance: none; appearance: none; }
+/* Search */
+.search { position: relative; margin-bottom: 12px; }
+.search .mag { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input[type="search"] { padding: 13px 46px 13px 44px; border-radius: 999px; background: var(--card); -webkit-appearance: none; appearance: none; }
 .search input::-webkit-search-cancel-button { display: none; }
-.search .clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+.search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+.tabs.dim { opacity: 0.45; }
+.tabs .n { margin-left: 5px; opacity: 0.6; font-weight: 400; }
 
-.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; margin-bottom: 6px; }
-.tabs button { flex: 1; border: 0; background: transparent; padding: 8px 4px; border-radius: 9px; color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
-.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-.tabs .n { font-weight: 500; font-size: 12px; margin-left: 3px; opacity: .8; font-variant-numeric: tabular-nums; }
-.tabs.dim { opacity: .45; }
+/* Status dots: wishlist hollow, applied grey, screening ring, interviewing solid,
+   offer/accepted red, closed ones faded. Used in badges and section titles. */
+.sd { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sd.wishlist { box-shadow: inset 0 0 0 1.5px var(--muted); }
+.sd.applied { background: var(--muted); }
+.sd.screening { box-shadow: inset 0 0 0 2px var(--text); }
+.sd.interviewing { background: var(--text); }
+.sd.offer, .sd.accepted { background: var(--red); }
+.sd.rejected, .sd.withdrawn, .sd.ghosted { background: var(--dot-off); }
+.badge { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); font: 700 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.badge.s-interviewing, .badge.s-screening { color: var(--text); }
+.badge.s-offer, .badge.s-accepted { color: var(--red); border-color: var(--red); }
+.section-title .sd { margin-right: -2px; }
+.section-title.with-dot::before { display: none; }
+.section-title.late { color: var(--red); }
 
-.section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; margin: 18px 4px 8px; }
-.section-title i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.section-title.late { color: var(--warn); }
+/* Application cards */
+.group { display: grid; gap: 8px; }
+.app-card { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 22px; padding: 14px 16px; }
+.app-card:active { transform: scale(0.99); }
+.app-card .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.app-card .co { font-weight: 650; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.app-card .role { margin-top: 2px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.app-card .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font: 10.5px/1.3 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.app-card .meta span { display: inline-flex; align-items: center; gap: 4px; }
+.app-card .next { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--line); font-size: 13px; color: var(--muted); }
+.app-card .next .when { color: var(--text); font-weight: 600; }
+.app-card .next.wait, .app-card .next.wait .when, .app-card .next.stale .when { color: var(--red); }
+/* One dot per round: pending ring, passed solid, failed red, cancelled hollow. */
+.rd { display: inline-flex; gap: 4px; margin-left: auto; }
+.rd i { width: 9px; height: 9px; border-radius: 50%; }
+.rd i.scheduled { box-shadow: inset 0 0 0 1.5px var(--text); }
+.rd i.passed { background: var(--text); }
+.rd i.failed { background: var(--red); }
+.rd i.cancelled { box-shadow: inset 0 0 0 1px var(--dot-off); }
 
-.group { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
-.card { display: block; width: 100%; border: 0; background: transparent; text-align: left; padding: 12px 14px; }
-.card + .card { border-top: 1px solid var(--line); }
-.card .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.card .co { font-weight: 650; overflow-wrap: anywhere; }
-.card .role { font-size: 14px; overflow-wrap: anywhere; }
-.card .meta { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--muted); font-size: 13px; margin-top: 3px; font-variant-numeric: tabular-nums; }
-.card .meta span { display: inline-flex; align-items: center; gap: 3px; }
-.card .next { margin-top: 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.card .next .when { font-weight: 600; color: var(--accent); }
-.card .next.wait .when, .card .next.stale .when { color: var(--warn); }
-.dots { display: inline-flex; gap: 3px; margin-left: auto; }
-.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--muted); }
-.dots i.passed { background: var(--ok); border-color: var(--ok); }
-.dots i.failed { background: var(--danger); border-color: var(--danger); }
-.dots i.cancelled { opacity: .35; }
+/* Interviews tab */
+.slot { display: flex; gap: 14px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 20px; padding: 12px 16px; align-items: baseline; }
+.slot .time { flex: none; min-width: 64px; font: 800 18px/1.1 var(--display); }
+.slot .what { min-width: 0; font-size: 15px; }
+.slot .what div { margin-top: 2px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 
-.badge { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 10px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); white-space: nowrap; }
-
-.slot { display: flex; gap: 12px; width: 100%; border: 0; background: transparent; text-align: left; padding: 11px 14px; align-items: flex-start; }
-.slot + .slot { border-top: 1px solid var(--line); }
-.slot .time { flex: none; width: 66px; white-space: nowrap; font-weight: 650; font-variant-numeric: tabular-nums; padding-top: 1px; }
-.slot .what { flex: 1; min-width: 0; }
-.slot .what b { font-weight: 650; }
-.slot .what div { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-
-.empty { text-align: center; color: var(--muted); padding: 44px 16px; }
-.empty b { display: block; color: var(--text); font-size: 18px; margin-bottom: 6px; }
-
-.fab { position: fixed; right: max(16px, calc(50% - 304px)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: grid; place-items: center; z-index: 5; }
-.fab:active { transform: scale(.95); }
-
-dialog { border: 0; border-radius: 20px; padding: 0; background: var(--surface); color: var(--text); width: min(460px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
-dialog::backdrop { background: rgba(0,0,0,.45); }
-dialog form { padding: 20px; display: grid; gap: 14px; }
-dialog h2 { margin: 0; font-size: 19px; outline: none; }
-label, .label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 0; }
-input, select, textarea { width: 100%; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; font-weight: 400; }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-textarea { resize: vertical; min-height: 72px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 10px; }
-.seg label { display: block; }
-.seg input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
-.seg span { display: flex; align-items: center; justify-content: center; padding: 8px 2px; border-radius: 7px; color: var(--muted); font-size: 13px; font-weight: 500; }
-.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-.seg input:focus-visible + span { outline: 2px solid var(--accent); }
+/* Application dialog */
 .statuses { display: flex; flex-wrap: wrap; gap: 6px; }
 .statuses label { display: block; }
 .statuses input { position: absolute; opacity: 0; pointer-events: none; width: auto; }
-.statuses span { display: inline-block; border: 1px solid var(--line); border-radius: 16px; padding: 5px 11px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.statuses input:checked + span { color: var(--c); border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
-.statuses input:focus-visible + span { outline: 2px solid var(--accent); }
-
-.rounds { display: grid; gap: 6px; }
-.rounds .head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600; }
-.rounds .r { display: flex; gap: 10px; align-items: center; width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 9px 10px; text-align: left; font-size: 14px; }
-.rounds .r .what { flex: 1; min-width: 0; }
+.statuses span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); font: 700 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.statuses input:checked + span { background: var(--text); border-color: var(--text); color: var(--bg); }
+.statuses input:checked + span .sd.rejected, .statuses input:checked + span .sd.withdrawn, .statuses input:checked + span .sd.ghosted { background: var(--muted); }
+.statuses input:focus-visible + span { outline: 1.5px solid var(--red); }
+.rounds { border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px 6px; }
+.rounds .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.rounds .r { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-top: 1px dotted var(--line); background: transparent; padding: 10px 0; text-align: left; }
+.rounds .r .what { flex: 1; font-size: 14px; }
 .rounds .r .what div { font-size: 12px; color: var(--muted); }
-.rounds .none { font-size: 13px; color: var(--muted); }
-.link { border: 0; background: transparent; color: var(--accent); font-weight: 650; padding: 4px; font-size: 14px; }
-.actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 4px; }
-.actions .left { margin-right: auto; }
-.btn { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 650; background: var(--surface-2); }
-.btn.primary { background: var(--accent); color: var(--accent-text); }
-.btn.danger { background: transparent; color: var(--danger); padding: 10px 8px; }
-.hint { font-size: 12px; color: var(--muted); font-weight: 400; }
-a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; }
-[hidden] { display: none !important; }
+.rounds .r .out { display: inline-flex; align-items: center; gap: 6px; font: 700 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.rounds .r .out.failed { color: var(--red); }
+.rounds .r .out.passed { color: var(--text); }
+.rounds .none { padding: 8px 0 10px; font: 11px/1.4 var(--mono); color: var(--muted); }
+.link { border: 0; background: transparent; padding: 4px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); }
+.open-url { margin-left: 8px; color: var(--red); text-decoration: none; }
+/* The headings take focus when a dialog opens (so the keyboard stays down); no ring on them. */
+dialog h2:focus { outline: none; }
 
-.toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 6px 6px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.25); display: flex; align-items: center; gap: 12px; min-height: 44px; z-index: 10; }
-.toast button { border: 0; background: transparent; color: var(--accent-soft); font-weight: 700; padding: 8px 10px; border-radius: 8px; }
-@media (prefers-color-scheme: dark) { .toast button { color: var(--accent-text); } }
+/* Toast with an action */
+.toast { display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; min-height: 42px; bottom: max(90px, calc(86px + env(safe-area-inset-bottom))); }
+.toast button { border: 0; background: transparent; color: var(--red); padding: 8px 12px; border-radius: 999px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
+<main>
+  <a class="back" href="/">Home</a>
+  <header class="app-top">
     <div>
       <h1>Jobs</h1>
-      <div class="sub" id="sub"></div>
+      <p class="sub" id="sub">&nbsp;</p>
     </div>
     <button class="notice" id="notice" aria-label="Edit profile and notice period"></button>
   </header>
@@ -192,7 +122,7 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
   <div class="search" role="search">
     <svg class="mag" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="q" type="search" placeholder="Search companies, roles, notes" aria-label="Search applications" autocomplete="off" enterkeyhint="search">
-    <button type="button" class="clear" id="qClear" aria-label="Clear search" hidden>
+    <button type="button" class="icon-btn clear" id="qClear" aria-label="Clear search" hidden>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>
@@ -203,8 +133,8 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
     <button role="tab" data-tab="closed">Closed</button>
   </div>
 
-  <main id="main"></main>
-</div>
+  <div id="list"></div>
+</main>
 
 <button class="fab" id="add" aria-label="New application">
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -215,7 +145,7 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
     <h2 id="appHead" tabindex="-1" autofocus>New application</h2>
     <label>Company <input name="company" required maxlength="120" autocomplete="off" placeholder="Company name"></label>
     <label>Role <input name="role" required maxlength="160" autocomplete="off" placeholder="e.g. Odoo Developer"></label>
-    <div class="label">Status <div class="statuses" id="statuses"></div></div>
+    <div class="field">Status <div class="statuses" id="statuses"></div></div>
     <div class="rounds" id="roundsBox">
       <div class="head"><span>Interview rounds</span><button type="button" class="link" id="addRound">+ Add round</button></div>
       <div id="roundsList"></div>
@@ -235,7 +165,7 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
       <label>Offered (LPA) <input name="offered_ctc" type="number" inputmode="decimal" min="0" step="0.1"></label>
     </div>
     <label>Contact <input name="contact" maxlength="300" autocomplete="off" placeholder="Recruiter, phone, email"></label>
-    <label><span>Job link <a class="open" id="openUrl" target="_blank" rel="noopener noreferrer" hidden>Open ↗</a></span><input name="url" type="url" maxlength="1000" autocomplete="off" placeholder="https://"></label>
+    <label><span>Job link <a class="open-url" id="openUrl" target="_blank" rel="noopener noreferrer" hidden>Open ↗</a></span><input name="url" type="url" maxlength="1000" autocomplete="off" placeholder="https://"></label>
     <label>Notes <textarea name="notes" maxlength="10000" placeholder="Stack, team, questions to ask…"></textarea></label>
     <div class="actions">
       <div class="left"><button type="button" class="btn danger" id="deleteApp" hidden>Delete</button></div>
@@ -256,7 +186,7 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
       </label>
     </div>
     <label>When <input name="scheduled_at" type="datetime-local"></label>
-    <div class="label">Result
+    <div class="field">Result
       <div class="seg">
         <label><input type="radio" name="outcome" value="scheduled" checked><span>Pending</span></label>
         <label><input type="radio" name="outcome" value="passed"><span>Passed</span></label>
@@ -294,10 +224,11 @@ a.open { font-size: 13px; color: var(--accent); font-weight: 600; text-decoratio
   </form>
 </dialog>
 
-<div class="toast" id="toast" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
+<div class="toast mono" id="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastAct" hidden></button></div>
 
 <script>
 "use strict";
+const SCHEMA = "jobs";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -319,8 +250,8 @@ const STALE_DAYS = 7;   // "applied" with no reply for this long gets a nudge
 const I_PIN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>';
 const I_CLOCK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 
-// Day keys are "YYYY-MM-DD". "today" comes from Postgres (Asia/Kolkata); round times
-// are real instants shown in the phone's own time zone.
+// Day keys are "YYYY-MM-DD". "today" comes from Postgres; round times are real
+// instants shown in the phone's own time zone.
 const toDate = s => new Date(s + "T00:00:00Z");
 const iso = d => d.toISOString().slice(0, 10);
 const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
@@ -334,25 +265,10 @@ const lpa = n => n == null ? "" : `₹${Number(n).toLocaleString(undefined, { ma
 
 let S = { today: null, profile: null, applications: [], rounds: [] };
 let tab = "pipeline", query = "";
-try { tab = localStorage.getItem("jobs.tab") || tab; } catch {}
+try { tab = localStorage.getItem("jobs.tab") || tab; } catch (e) {}
 if (!["pipeline", "upcoming", "closed"].includes(tab)) tab = "pipeline";
 
-async function api(method, path, body) {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      msg = typeof j.detail === "string" ? j.detail : (j.detail?.[0]?.msg || msg);
-    } catch {}
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
-  return res.status === 204 ? null : res.json();
-}
+const rpc = (fn, args, opts) => exo.rpc(SCHEMA, fn, args, opts);
 
 let toastTimer, toastAction = null;
 function toast(msg, actionLabel, action) {
@@ -372,7 +288,7 @@ $("#toastAct").addEventListener("click", () => {
 
 async function load() {
   try {
-    S = await api("GET", "api/state");
+    S = await rpc("state", {}, { read: true });
     render();
     if ($("#appDialog").open && editing) {
       editing = S.applications.find(a => a.id === editing.id) || editing;
@@ -383,7 +299,7 @@ async function load() {
   }
 }
 
-// ---- helpers -------------------------------------------------------------
+// ---- helpers ----------------------------------------------------------------------
 
 const roundsOf = id => S.rounds.filter(r => r.application_id === id);
 const appById = id => S.applications.find(a => a.id === Number(id));
@@ -414,7 +330,8 @@ function ago(days) {
 
 const agoDay = d => { const n = daysBetween(d, S.today); return n <= 0 ? "today" : n === 1 ? "yesterday" : `${ago(n)} ago`; };
 const daysIn = a => daysBetween(localKey(new Date(a.status_changed_at)), S.today);
-const badge = s => `<span class="badge" style="--c:var(--s-${s})">${STATUS[s]}</span>`;
+const sdot = s => `<i class="sd ${s}"></i>`;
+const badge = s => `<span class="badge s-${s}">${sdot(s)}${STATUS[s]}</span>`;
 
 // The thing to look at next on an application: an upcoming round, a round
 // waiting for its result, or a nudge when an application has gone quiet.
@@ -439,9 +356,9 @@ function card(a) {
   if (OPEN.includes(a.status) && a.status !== "wishlist") meta.push(`<span>${daysIn(a) > 0 ? `for ${ago(daysIn(a))}` : "since today"}</span>`);
   if (CLOSED.includes(a.status)) meta.push(`<span>${esc(dayLabel(localKey(new Date(a.status_changed_at))))}</span>`);
   const rs = roundsOf(a.id);
-  const dots = rs.length ? `<span class="dots" aria-label="${rs.filter(r => r.outcome === "passed").length} of ${rs.length} rounds passed">${rs.map(r => `<i class="${r.outcome}" title="${esc(KIND[r.kind])}: ${OUTCOME[r.outcome]}"></i>`).join("")}</span>` : "";
+  const dots = rs.length ? `<span class="rd" aria-label="${rs.filter(r => r.outcome === "passed").length} of ${rs.length} rounds passed">${rs.map(r => `<i class="${r.outcome}" title="${esc(KIND[r.kind])}: ${OUTCOME[r.outcome]}"></i>`).join("")}</span>` : "";
   const n = OPEN.includes(a.status) ? nextUp(a) : null;
-  return `<button class="card" data-id="${a.id}">
+  return `<button class="app-card" data-id="${a.id}">
     <div class="top"><span class="co">${esc(a.company)}</span>${badge(a.status)}</div>
     <div class="role">${esc(a.role)}</div>
     ${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}
@@ -449,29 +366,35 @@ function card(a) {
   </button>`;
 }
 
-const section = (title, items, color, cls = "") => !items.length ? "" :
-  `<div class="section-title ${cls}">${color ? `<i style="background:${color}"></i>` : ""}<span>${esc(title)} · ${items.length}</span></div><div class="group">${items.join("")}</div>`;
+// status: draw that status's dot instead of the default red one.
+const section = (title, items, status = "", cls = "") => !items.length ? "" :
+  `<h2 class="section-title ${status ? "with-dot" : ""} ${cls}">${status ? sdot(status) : ""}${esc(title)} <span class="count">${String(items.length).padStart(2, "0")}</span></h2><div class="group">${items.join("")}</div>`;
 
-const empty = (head, text) => `<div class="empty"><b>${esc(head)}</b>${esc(text)}</div>`;
+const empty = (head, text) => `<div class="empty-state"><p class="display">${esc(head)}</p><p>${esc(text)}</p></div>`;
 
-// ---- render --------------------------------------------------------------
+// ---- render -----------------------------------------------------------------------
 
 function render() {
   const p = S.profile || {};
   const t = S.today;
-  const sub = [p.headline, p.experience_years != null ? `${p.experience_years} yrs` : null].filter(Boolean).join(" · ");
-  $("#sub").textContent = sub;
+  $("#sub").textContent = [p.headline, p.experience_years != null ? `${p.experience_years} yrs` : null].filter(Boolean).join(" · ") || " ";
 
   const notice = $("#notice");
+  notice.className = "notice";
   if (p.notice_ends_on) {
     const left = daysBetween(t, p.notice_ends_on);
-    notice.classList.remove("set");
-    notice.innerHTML = left > 0
-      ? `<b>${left} day${left === 1 ? "" : "s"}</b>notice ends ${esc(fmtDay(p.notice_ends_on, { day: "numeric", month: "short" }))}`
-      : left === 0 ? `<b>Last day</b>of notice` : `<b>Free</b>since ${esc(fmtDay(addDays(p.notice_ends_on, 1), { day: "numeric", month: "short" }))}`;
+    if (left > 0) {
+      notice.innerHTML = `<span class="big">${left}d</span><span class="small">notice · ends ${esc(fmtDay(p.notice_ends_on, { day: "numeric", month: "short" }))}</span>`;
+    } else if (left === 0) {
+      notice.classList.add("last");
+      notice.innerHTML = `<span class="big">Last day</span><span class="small">of notice</span>`;
+    } else {
+      notice.classList.add("free");
+      notice.innerHTML = `<span class="big">Free</span><span class="small">since ${esc(fmtDay(addDays(p.notice_ends_on, 1), { day: "numeric", month: "short" }))}</span>`;
+    }
   } else {
     notice.classList.add("set");
-    notice.innerHTML = `<b>—</b>set notice date`;
+    notice.innerHTML = `<span class="big">—</span><span class="small">set notice date</span>`;
   }
 
   const active = S.applications.filter(a => OPEN.includes(a.status) && a.status !== "wishlist");
@@ -480,9 +403,9 @@ function render() {
     && localKey(new Date(r.scheduled_at)) < weekEnd);
   const offers = S.applications.filter(a => a.status === "offer" || a.status === "accepted");
   $("#stats").innerHTML = `
-    <div class="stat"><b>${active.length}</b><span>active</span></div>
-    <div class="stat"><b>${soon.length}</b><span>this week</span></div>
-    <div class="stat ${offers.length ? "hot" : ""}"><b>${offers.length}</b><span>offer${offers.length === 1 ? "" : "s"}</span></div>`;
+    <div class="stat"><b>${String(active.length).padStart(2, "0")}</b><span>active</span></div>
+    <div class="stat"><b>${String(soon.length).padStart(2, "0")}</b><span>this week</span></div>
+    <div class="stat ${offers.length ? "hot" : ""}"><b>${String(offers.length).padStart(2, "0")}</b><span>offer${offers.length === 1 ? "" : "s"}</span></div>`;
 
   const counts = {
     pipeline: S.applications.filter(a => OPEN.includes(a.status)).length,
@@ -497,7 +420,7 @@ function render() {
   });
 
   $("#tabs").classList.toggle("dim", !!query);
-  $("#main").innerHTML = query ? renderSearch() : ({ pipeline: renderPipeline, upcoming: renderUpcoming, closed: renderClosed })[tab]();
+  $("#list").innerHTML = query ? renderSearch() : ({ pipeline: renderPipeline, upcoming: renderUpcoming, closed: renderClosed })[tab]();
 }
 
 const byStage = (a, b) => {
@@ -513,15 +436,15 @@ function nextAt(a) {
 }
 
 function renderPipeline() {
-  const out = OPEN.map(s => section(STATUS[s], S.applications.filter(a => a.status === s).sort(byStage).map(card), `var(--s-${s})`)).join("");
-  return out || empty("No applications yet", "Tap + to add the first one.");
+  const out = OPEN.map(s => section(STATUS[s], S.applications.filter(a => a.status === s).sort(byStage).map(card), s)).join("");
+  return out || empty("No applications yet", "Tap + to add the first one");
 }
 
 function renderClosed() {
   const out = CLOSED.map(s => section(STATUS[s],
     S.applications.filter(a => a.status === s).sort((a, b) => a.status_changed_at < b.status_changed_at ? 1 : -1).map(card),
-    `var(--s-${s})`)).join("");
-  return out || empty("Nothing closed", "Rejected, withdrawn, ghosted and accepted applications end up here.");
+    s)).join("");
+  return out || empty("Nothing closed", "Rejected, withdrawn, ghosted and accepted applications end up here");
 }
 
 function slot(r, { showDay = false } = {}) {
@@ -541,7 +464,7 @@ function renderUpcoming() {
   const live = S.rounds.filter(r => r.outcome === "scheduled" && r.scheduled_at && OPEN.includes(appById(r.application_id)?.status));
   const waiting = live.filter(r => new Date(r.scheduled_at) < t).sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : -1);
   const next = live.filter(r => new Date(r.scheduled_at) >= t).sort((a, b) => a.scheduled_at < b.scheduled_at ? -1 : 1);
-  if (!waiting.length && !next.length) return empty("No interviews lined up", "Add rounds from an application to see them here.");
+  if (!waiting.length && !next.length) return empty("No interviews lined up", "Add rounds from an application to see them here");
   let html = section("Waiting to hear back", waiting.map(r => slot(r, { showDay: true })), "", "late");
   const days = new Map();
   for (const r of next) { const k = localKey(new Date(r.scheduled_at)); (days.get(k) || days.set(k, []).get(k)).push(r); }
@@ -555,11 +478,11 @@ function renderSearch() {
   const text = a => [a.company, a.role, a.location, a.source, a.contact, a.notes, STATUS[a.status],
     ...roundsOf(a.id).flatMap(r => [r.notes, r.interviewer, KIND[r.kind]])].join(" ").toLowerCase();
   const found = S.applications.filter(a => { const s = text(a); return words.every(w => s.includes(w)); });
-  if (!found.length) return empty("No matches", `Nothing matches “${query}”.`);
-  return [...OPEN, ...CLOSED].map(s => section(STATUS[s], found.filter(a => a.status === s).map(card), `var(--s-${s})`)).join("");
+  if (!found.length) return empty("No matches", `Nothing matches “${query}”`);
+  return [...OPEN, ...CLOSED].map(s => section(STATUS[s], found.filter(a => a.status === s).map(card), s)).join("");
 }
 
-// ---- events --------------------------------------------------------------
+// ---- events -----------------------------------------------------------------------
 
 $("#q").addEventListener("input", e => {
   query = e.target.value.trim();
@@ -575,13 +498,13 @@ $("#qClear").addEventListener("click", () => { clearSearch(); $("#q").focus(); }
 
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => {
   tab = b.dataset.tab;
-  try { localStorage.setItem("jobs.tab", tab); } catch {}
+  try { localStorage.setItem("jobs.tab", tab); } catch (e) {}
   if (query) { $("#q").value = ""; query = ""; $("#qClear").hidden = true; }
   render();
 }));
 
-$("#main").addEventListener("click", e => {
-  const c = e.target.closest(".card");
+$("#list").addEventListener("click", e => {
+  const c = e.target.closest(".app-card");
   if (c) return openApp(appById(c.dataset.id));
   const s = e.target.closest(".slot");
   if (s) {
@@ -596,12 +519,12 @@ $("#notice").addEventListener("click", openProfile);
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
 document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
 
-// ---- application dialog --------------------------------------------------
+// ---- application dialog -------------------------------------------------------------
 
 let editing = null;
 const af = $("#appForm");
 $("#statuses").innerHTML = [...OPEN.slice().reverse(), ...CLOSED].map(s =>
-  `<label style="--c:var(--s-${s})"><input type="radio" name="status" value="${s}"><span>${STATUS[s]}</span></label>`).join("");
+  `<label class="plain"><input type="radio" name="status" value="${s}"><span>${sdot(s)}${STATUS[s]}</span></label>`).join("");
 
 function openApp(a) {
   editing = a;
@@ -632,10 +555,9 @@ function renderRounds() {
   const rs = roundsOf(editing.id).slice().sort((a, b) => (a.scheduled_at || "9999") < (b.scheduled_at || "9999") ? -1 : 1);
   $("#roundsList").innerHTML = rs.length ? rs.map(r => {
     const when = r.scheduled_at ? whenLabel(r.scheduled_at) : "No date yet";
-    const c = { scheduled: "var(--accent)", passed: "var(--ok)", failed: "var(--danger)", cancelled: "var(--muted)" }[r.outcome];
     return `<button type="button" class="r" data-round="${r.id}">
       <div class="what">${esc(KIND[r.kind])}<div>${esc(when)}${r.mode ? ` · ${MODE[r.mode]}` : ""}</div></div>
-      <span class="badge" style="--c:${c}">${OUTCOME[r.outcome]}</span>
+      <span class="out ${r.outcome}"><span class="rd"><i class="${r.outcome}"></i></span>${OUTCOME[r.outcome]}</span>
     </button>`;
   }).join("") : `<div class="none">No rounds yet.</div>`;
 }
@@ -666,7 +588,9 @@ af.addEventListener("submit", async e => {
   };
   try {
     const was = editing?.status;
-    const saved = editing ? await api("PATCH", `api/applications/${editing.id}`, body) : await api("POST", "api/applications", body);
+    const saved = editing
+      ? await rpc("update_application", { app_id: editing.id, patch: body })
+      : await rpc("create_application", { application: body });
     $("#appDialog").close();
     await load();
     if (!editing) toast(`Added ${saved.company}`);
@@ -680,13 +604,13 @@ $("#deleteApp").addEventListener("click", async () => {
   const n = roundsOf(a.id).length;
   if (!confirm(`Delete ${a.company}${n ? ` and its ${n} round${n === 1 ? "" : "s"}` : ""}? This can't be undone.`)) return;
   try {
-    await api("DELETE", `api/applications/${a.id}`);
+    await rpc("delete_application", { app_id: a.id });
     $("#appDialog").close();
     load();
   } catch (e) { toast(e.message); }
 });
 
-// ---- round dialog --------------------------------------------------------
+// ---- round dialog -----------------------------------------------------------------
 
 let editingRound = null, roundApp = null;
 const rf = $("#roundForm");
@@ -725,16 +649,17 @@ rf.addEventListener("submit", async e => {
     notes: rf.notes.value.trim() || null,
   };
   try {
-    if (editingRound) await api("PATCH", `api/rounds/${editingRound.id}`, body);
-    else await api("POST", `api/applications/${roundApp.id}/rounds`, body);
+    if (editingRound) await rpc("update_round", { round_id: editingRound.id, patch: body });
+    else await rpc("create_round", { app_id: roundApp.id, round: body });
     $("#roundDialog").close();
     // A first scheduled round moves an early-stage application along.
     const a = roundApp;
     if (!editingRound && a && ["wishlist", "applied"].includes(a.status)) {
-      await api("PATCH", `api/applications/${a.id}`, { status: body.kind === "hr" ? "screening" : "interviewing" });
-      if ($("#appDialog").open && editing?.id === a.id) af.status.value = body.kind === "hr" ? "screening" : "interviewing";
+      const next = body.kind === "hr" ? "screening" : "interviewing";
+      await rpc("update_application", { app_id: a.id, patch: { status: next } });
+      if ($("#appDialog").open && editing?.id === a.id) af.status.value = next;
     } else if (!editingRound && a && a.status === "screening" && body.kind !== "hr") {
-      await api("PATCH", `api/applications/${a.id}`, { status: "interviewing" });
+      await rpc("update_application", { app_id: a.id, patch: { status: "interviewing" } });
       if ($("#appDialog").open && editing?.id === a.id) af.status.value = "interviewing";
     }
     load();
@@ -745,13 +670,13 @@ $("#deleteRound").addEventListener("click", async () => {
   const r = editingRound;
   if (!r || !confirm(`Delete this ${KIND[r.kind]} round?`)) return;
   try {
-    await api("DELETE", `api/rounds/${r.id}`);
+    await rpc("delete_round", { round_id: r.id });
     $("#roundDialog").close();
     load();
   } catch (e) { toast(e.message); }
 });
 
-// ---- profile dialog ------------------------------------------------------
+// ---- profile dialog ---------------------------------------------------------------
 
 const pf = $("#profileForm");
 function openProfile() {
@@ -764,20 +689,20 @@ pf.addEventListener("submit", async e => {
   e.preventDefault();
   const num = v => v === "" ? null : Number(v);
   try {
-    await api("PUT", "api/profile", {
+    await rpc("put_profile", { profile: {
       headline: pf.headline.value.trim(),
       experience_years: num(pf.experience_years.value),
       notice_ends_on: pf.notice_ends_on.value || null,
       current_ctc: num(pf.current_ctc.value),
       expected_ctc: num(pf.expected_ctc.value),
       notes: pf.notes.value.trim() || null,
-    });
+    } });
     $("#profileDialog").close();
     load();
   } catch (err) { toast(err.message); }
 });
 
-// Pick up a new day (and edits from Claude) when the tab comes back into view.
+// Pick up a new day (and changes made through the MCP server) when the tab comes back.
 document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
 
 load();
