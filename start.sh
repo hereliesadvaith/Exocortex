@@ -124,7 +124,7 @@ start_ngrok() {
     --log stdout --log-format logfmt --log-level warn >> ngrok.log 2>&1 &
   echo $! > ngrok.pid
   local url
-  for _ in $(seq 20); do
+  for _ in $(seq 30); do
     if url=$(ngrok_url); then
       echo "ngrok tunnel: $url -> 127.0.0.1:$PORT"
       return 0
@@ -135,7 +135,13 @@ start_ngrok() {
   echo "ngrok didn't come up; its errors (full log: ngrok.log):" >&2
   sed -n "$(grep -n '===== .* starting ngrok' ngrok.log | tail -1 | cut -d: -f1),\$p" ngrok.log \
     | grep -vE 'netlinkrib' | grep -E 'lvl=(eror|crit|warn)|ERR_NGROK' | tail -8 >&2 || true
-  stop_pid ngrok.pid ngrok >/dev/null
+  # ngrok keeps retrying by itself, so a slow network (or a phone that just booted)
+  # only delays the tunnel. Leave it running unless it has exited.
+  if alive ngrok.pid; then
+    echo "ngrok is still running and retrying; check with: ./start.sh status" >&2
+  else
+    rm -f ngrok.pid
+  fi
   return 1
 }
 
