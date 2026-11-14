@@ -75,7 +75,7 @@ pgrst_start() {
   PGRST_DB_POOL=4 \
   PGRST_SERVER_HOST=127.0.0.1 \
   PGRST_SERVER_PORT=$PGRST_PORT \
-  PGRST_SERVER_CORS_ALLOWED_ORIGINS="http://localhost,http://127.0.0.1,http://localhost:8080,http://127.0.0.1:8080" \
+  PGRST_SERVER_CORS_ALLOWED_ORIGINS="http://localhost,http://127.0.0.1" \
   PGRST_OPENAPI_MODE=disabled \
   PGRST_LOG_LEVEL=warn \
     nohup postgrest >> "$PGRST_LOG" 2>&1 < /dev/null &

@@ -169,7 +169,7 @@ cd ~/exocortex && home/install.sh
 4. starts Postgres, applies `home/schema.sql`, restarts PostgREST, starts or reloads nginx;
 5. installs the boot script.
 
-Then open **http://localhost/** on the phone (`http://localhost:8080/` works too). Apps are at `http://localhost/<app>/`.
+Then open **http://localhost/** on the phone. Apps are at `http://localhost/<app>/`.
 
 | Section | Shows |
 |---|---|
@@ -181,7 +181,7 @@ It refreshes every 5 seconds while it's open (every second while switching). Lig
 
 ### How it works
 
-- **nginx** (`127.0.0.1:80`, and `:8080`) serves `home/public/` and proxies `/api/` to PostgREST. Android lets apps listen on port 80 (not on most low ports, such as 53). nginx only listens on loopback, and `/api/` rejects requests whose `Origin` isn't `localhost`, so a website open in the phone's browser can't call it.
+- **nginx** (`127.0.0.1:80`) serves `home/public/` and proxies `/api/` to PostgREST. Android lets apps listen on port 80 (not on most low ports, such as 53). nginx only listens on loopback, and `/api/` rejects requests whose `Origin` isn't `localhost`, so a website open in the phone's browser can't call it.
 - **PostgREST** (`127.0.0.1:3000`) logs in over the local socket as `home_api` and serves schema `home` as `home_web`, which can only read `home.apps` and call two functions.
 - **`home.status()`** and **`home.mcp_set(enabled)`** are PL/Python `SECURITY DEFINER` functions, so they run as the Termux user: they read `/proc`, PID files and logs, and `mcp_set` runs `start.sh -d` or `stop` detached. Only one switch runs at a time.
 
