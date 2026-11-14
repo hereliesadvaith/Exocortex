@@ -35,7 +35,7 @@ def log(msg):
 
 
 def psql(sql, *args):
-    out = subprocess.run(["psql", "-U", "postgres", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1", *args, "-c", sql],
+    out = subprocess.run(["psql", "-U", "postgres", "-X", "-q", "-At", "-F", "\t", "-v", "ON_ERROR_STOP=1", *args, "-c", sql],
                          capture_output=True, text=True)
     if out.returncode:
         raise SystemExit(f"psql failed: {out.stderr.strip()}")
