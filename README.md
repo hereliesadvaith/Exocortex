@@ -28,7 +28,7 @@ Two kinds, both without an API key:
 | What | From | How |
 |---|---|---|
 | Poster links | IMDb's search suggestions (`v3.sg.media-imdb.com`), the endpoint IMDb's own search box uses | One small request per title, once; the link is saved and the page shows the image straight from IMDb's image server. Also how the + button searches IMDb. Not a documented API, so IMDb could change it. |
-| Genres, runtime, years (running or ended), aired-episode totals | [IMDb's datasets](https://developer.imdb.com/non-commercial-datasets/) (`title.basics`, `title.episode`), free for personal, non-commercial use | Streamed, keeping only your titles: about 250 MB to download, best on Wi-Fi. |
+| Genres, runtime, years (running or ended), aired-episode totals | [IMDb's datasets](https://developer.imdb.com/non-commercial-datasets/) (`title.basics`, `title.episode`, `title.ratings`), free for personal, non-commercial use | Streamed, keeping only your titles: about 295 MB to download on every run, so run it only now and then, on Wi-Fi. |
 
 ```sh
 cd ~/apps/tvtime
@@ -36,7 +36,7 @@ python sync.py --posters    # poster links for titles without one (new titles ge
 python sync.py --datasets   # genres, runtime, years, episode totals; run now and then for new episodes
 ```
 
-An episode counts as aired when IMDb gives it a year that isn't in the future (announced episodes have none). After a datasets sync, an up-to-date series with more aired episodes than you've watched shows "N new".
+An episode counts when it is numbered, in season 1 or later (IMDb also lists specials and recaps), and has IMDb votes, which means it has aired (IMDb lists episodes before they air). A total is never set below the episodes you've watched. After a datasets sync, an up-to-date series with more aired episodes than you've watched moves back to watching.
 
 ## Data
 

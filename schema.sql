@@ -8,7 +8,7 @@
 -- tvtime.genres        IMDb's genres; movie_genres / series_genres link titles to them.
 --
 -- Titles are identified by their IMDb id (tt...). Genres, runtime, end year and
--- episode totals come from IMDb's datasets (sync.sh); poster_url is the link to
+-- episode totals come from IMDb's datasets (sync.py); poster_url is the link to
 -- IMDb's poster image, shown by the page straight from IMDb's image server.
 --
 -- The page calls the functions at the end through PostgREST (/api/rpc/<fn> with
@@ -32,7 +32,7 @@ create table if not exists tvtime.movies (
     rewatch_count integer not null default 0 check (rewatch_count >= 0),
     runtime_min integer,
     poster_url text,
-    imdb_synced_at timestamptz,      -- last time sync.sh found it in IMDb's datasets
+    imdb_synced_at timestamptz,      -- last time sync.py found it in IMDb's datasets
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
