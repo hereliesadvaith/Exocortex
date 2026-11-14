@@ -287,8 +287,8 @@ function renderSeries() {
   let html = "";
   if (fresh.length) html += title("New", fresh.length) + `<div class="rows">${fresh.map(srow).join("")}</div>`;
   if (watching.length) html += title("Watching", watching.length) + `<div class="watching">${watching.map(wcard).join("")}</div>`;
-  if (upToDate.length) html += title("Up to date", upToDate.length) + `<div class="rows">${upToDate.map(srow).join("")}</div>`;
   if (paused.length) html += title("Paused", paused.length) + `<div class="rows">${paused.map(srow).join("")}</div>`;
+  if (upToDate.length) html += title("Up to date", upToDate.length) + `<div class="rows">${upToDate.map(srow).join("")}</div>`;
   if (finished.length) html += title("Finished", finished.length) + `<div class="grid">${finished.map(s => tile(s, "series")).join("")}</div>`;
   return html;
 }
