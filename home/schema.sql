@@ -2,7 +2,7 @@
 -- main README). Safe to run again; install.sh applies it on every install/update.
 --
 --   GET  /api/rpc/status            everything the page shows, in one call
---   POST /api/rpc/mcp_set {"on":b}  start or stop the MCP server and its ngrok tunnel
+--   POST /api/rpc/mcp_set {"enabled":b}  start or stop the MCP server and its ngrok tunnel
 --   GET  /api/apps                  the registered apps
 --
 -- PostgREST logs in as home_api and switches to home_web, which can only read
@@ -270,7 +270,7 @@ return json.dumps({
 $py$;
 
 -- ---- MCP switch -------------------------------------------------------------------
-create or replace function home.mcp_set(on boolean) returns jsonb
+create or replace function home.mcp_set(enabled boolean) returns jsonb
 language plpython3u volatile security definer
 set search_path = pg_catalog, home
 as $py$
@@ -295,6 +295,7 @@ try:
         prev = json.load(f)
 except (OSError, ValueError):
     prev = {}
+on = enabled
 if prev.get("pid") and running(prev["pid"]) and time.time() - prev.get("at", 0) < 60:
     plpy.error("the MCP server is already switching; try again in a few seconds")
 

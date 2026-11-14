@@ -212,7 +212,7 @@ $("mcp-switch").addEventListener("click", async () => {
   switching = { on, until: Date.now() + SWITCH_TIMEOUT_MS };
   renderMcp(last.mcp);
   try {
-    await api("/rpc/mcp_set", { method: "POST", body: JSON.stringify({ on }) });
+    await api("/rpc/mcp_set", { method: "POST", body: JSON.stringify({ enabled: on }) });
     toast(on ? "Starting the MCP server and tunnel…" : "Stopping the MCP server and tunnel…");
   } catch (e) {
     switching = null;
