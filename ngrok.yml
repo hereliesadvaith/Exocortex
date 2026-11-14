@@ -1,0 +1,16 @@
+# ngrok agent settings, passed by start.sh (--config). The authtoken comes from
+# NGROK_AUTHTOKEN in .env.
+#
+# ngrok is a Linux build. With no /etc/resolv.conf (Android has none) it looks up
+# names by asking a DNS server on the phone itself ([::1]:53), and nothing answers
+# there unless the phone's hotspot happens to be on. So:
+version: "2"
+# Look up ngrok's servers through public DNS instead.
+dns_resolver_ips:
+  - 1.1.1.1
+  - 8.8.8.8
+# These two make their own lookups that ignore dns_resolver_ips, so they'd still
+# fail. The tunnel's TLS is still verified against ngrok's certificate either way;
+# this only skips downloading ngrok's revocation list.
+crl_noverify: true
+update_check: false

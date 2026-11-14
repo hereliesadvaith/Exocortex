@@ -119,7 +119,8 @@ start_ngrok() {
   fi
   # NGROK_AUTHTOKEN is read from the environment.
   # warn level: info would also log every status poll of the local API.
-  nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" \
+  # ngrok.yml: DNS settings that make it work on Android (see the file).
+  nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" --config ngrok.yml \
     --log stdout --log-format logfmt --log-level warn >> ngrok.log 2>&1 &
   echo $! > ngrok.pid
   local url
