@@ -1,68 +1,59 @@
 # Habits
 
-A habit tracker page for the phone: tick off today's habits, step counts and minutes up or down, backfill the last week, add a note to any day, and see streaks and a 16-week heatmap per habit. It opens in the phone's browser at **http://localhost/habits/**.
+A habit tracker for the phone: tick off today's habits, step counts and minutes up or down, backfill the last week, add a note to any day, and see streaks and a 16-week history per habit. It opens at **http://localhost/habits/**, and has a tile on the exocortex home page at http://localhost/.
 
 ```
-phone browser ──► nginx (127.0.0.1:80) ──/habits/──► FastAPI (app.py, 127.0.0.1:8001) ──► PostgreSQL, schema `habits`
+phone browser ──► nginx (127.0.0.1:80) ─┬─ /habits/  ──► public/ (static page)
+                                        └─ /api/     ──► PostgREST ──► Postgres, schema "habits"
 ```
 
-It runs on its own, from its own directory, with its own virtualenv, settings and logs. It shares the Postgres server, where the `habits` schema lives (`schema.sql`), and nginx's localhost site, which comes from the exocortex repo (`main` branch, `nginx/localhost.conf`) along with the home page at http://localhost/.
+There's no server process of its own: the page is static, and its data and logic live in the `habits` schema, called through the PostgREST that the home page already runs. The look comes from the home page's `/ui.css`.
 
-## Setup (inside Debian, as root)
+## Install
+
+Needs the exocortex core (the `main` branch) set up first: Postgres with PL/Python, nginx, PostgREST and the home page (`~/exocortex/home/install.sh`).
 
 ```sh
-apt install -y nginx
-git clone -b habits https://github.com/hereliesadvaith/exocortex.git /root/habits
-cd /root/habits
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+git clone -b habits https://github.com/hereliesadvaith/exocortex.git ~/apps/habits
+~/apps/habits/install.sh
 ```
 
-Create a database role that can use the `habits` schema and nothing else:
+`install.sh` is safe to run again (also after a `git pull`):
 
-```sh
-su postgres -c psql <<'SQL'
-CREATE ROLE habits LOGIN PASSWORD 'choose-a-strong-password';
-GRANT USAGE ON SCHEMA habits TO habits;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA habits TO habits;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA habits TO habits;
-ALTER DEFAULT PRIVILEGES IN SCHEMA habits GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO habits;
-ALTER DEFAULT PRIVILEGES IN SCHEMA habits GRANT USAGE ON SEQUENCES TO habits;
-SQL
-```
+1. applies `schema.sql`: tables, the `status` view, and the API functions;
+2. writes `$PREFIX/etc/nginx/apps.d/habits.conf`, serving `public/` at `/habits/`, and reloads nginx;
+3. registers the app in `home.apps` (so it gets a tile) with `api_schema = 'habits'`, and runs `~/exocortex/home/sync-api.sh` so PostgREST serves the schema;
+4. checks the page and the API answer.
 
-Then put that password in `.env`:
+`./install.sh remove` takes it off nginx and the home page; the data stays in schema `habits` (`drop schema habits cascade` to delete it).
 
-```sh
-cp .env.example .env
-chmod 600 .env
-nano .env
-```
+## Data
 
-## Run it
+| | |
+|---|---|
+| `habits.habits` | One row per habit. `kind`: `check` (done or not), `count` or `minutes`; count and minutes need a daily `target`. `times_per_week` below 7 makes the streak count weeks in which the habit was met that many days. `active = false` archives it. |
+| `habits.logs` | At most one row per habit per day; a day counts as met when `value >= target` (1 for check habits). Optional `note`. |
+| `habits.status` | View, per active habit: done today, done this week, current streak (days or weeks), best daily streak, last logged day. |
 
-```sh
-./start.sh start     # starts Postgres if it's down, then the app, and nginx if it's down
-./start.sh stop      # stops the app only; nginx keeps serving the rest
-./start.sh restart
-./start.sh status
-./start.sh update    # git pull, reinstall requirements if they changed, restart
-tail -f habits.log
-```
-
-After a phone reboot: open Termux → `proot-distro login debian` → `/root/habits/start.sh start`.
-
-`nginx.conf` here is just the `/habits/` locations. `start.sh` links it in as `/etc/nginx/localhost.d/habits.conf`, which the exocortex localhost site includes, and links `app.json` into `/etc/exocortex/apps/` so the home page shows a Habits icon with its status. Start the exocortex server first on a fresh setup; `./start.sh status` says whether the include is in place. Both nginx and the app listen on 127.0.0.1 only, so the page has no login: only apps on the phone can reach it.
+"Today" is Postgres's `current_date`, so the database time zone decides where a day ends.
 
 ## API
 
-All paths are under `/habits/`.
+The page calls these through PostgREST at `/api/rpc/<function>` with the header `Accept-Profile: habits` (GET) or `Content-Profile: habits` (POST, JSON body). They're `SECURITY DEFINER`; the API role can call them and nothing else in the schema.
 
-| Method | Path | Body | Does |
-|---|---|---|---|
-| GET | `api/state?days=84` | | every habit with streaks, plus logs of the last `days` days |
-| POST | `api/habits` | `{name, kind, target, times_per_week}` | add a habit (`kind`: `check`, `count` or `minutes`) |
-| PATCH | `api/habits/{id}` | any of those fields, or `active` | edit, archive (`active: false`) or restore |
-| DELETE | `api/habits/{id}` | | delete a habit and its history |
-| PUT | `api/logs/{id}/{YYYY-MM-DD}` | `{value, note}` | set a day's value and note |
-| DELETE | `api/logs/{id}/{YYYY-MM-DD}` | | clear a day |
+| Function | |
+|---|---|
+| `state(days = 84)` (GET) | Every habit with its status, plus the logs of the last `days` days |
+| `create_habit(name, kind = 'check', target, times_per_week = 7)` | Returns `{"id": ...}` |
+| `update_habit(habit_id, patch)` | `patch`: any of `name`, `kind`, `target`, `times_per_week`, `active` |
+| `delete_habit(habit_id)` | Deletes the habit and its history |
+| `set_log(habit_id, day, value, note)` | One value per habit per day; saving again replaces it |
+| `delete_log(habit_id, day)` | Clears a day |
+
+```sh
+curl -s -H 'Accept-Profile: habits' 'http://localhost/api/rpc/state?days=7'
+curl -s -X POST -H 'Content-Profile: habits' -H 'Content-Type: application/json' \
+  -d '{"name": "Read", "kind": "minutes", "target": 20}' http://localhost/api/rpc/create_habit
+```
+
+Errors come back with a message and a fitting status: 409 for a duplicate name, 404 for a missing habit, 400 for invalid values.
