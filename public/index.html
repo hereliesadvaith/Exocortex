@@ -77,7 +77,8 @@ main { padding-bottom: 110px; }
 .counter { display: flex; align-items: center; gap: 10px; }
 .counter input { flex: 1; min-width: 0; padding: 10px 2px !important; text-align: center; font: 800 22px/1 var(--display) !important; }
 .counter button { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--text); background: transparent; font-size: 22px; line-height: 1; }
-.seg.five span { padding-left: 2px; padding-right: 2px; font-size: 9.5px; }
+.seg.six { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); border-radius: 22px; }
+.seg.six span { padding-left: 2px; padding-right: 2px; }
 .results { display: grid; gap: 2px; max-height: 52vh; overflow-y: auto; }
 .result { display: flex; gap: 12px; align-items: center; padding: 8px 2px; border-top: 1px dotted var(--line); }
 .result .poster { width: 44px; border-radius: 8px; }
@@ -158,8 +159,9 @@ dialog h2:focus { outline: none; }
   <form method="dialog" id="seriesForm">
     <div class="detail-head" id="seriesHead"></div>
     <div class="field">Status
-      <div class="seg five">
+      <div class="seg six">
         <label><input type="radio" name="status" value="watchlist"><span>List</span></label>
+        <label><input type="radio" name="status" value="new"><span>New</span></label>
         <label><input type="radio" name="status" value="watching"><span>Watching</span></label>
         <label><input type="radio" name="status" value="up_to_date"><span>Up to date</span></label>
         <label><input type="radio" name="status" value="paused"><span>Paused</span></label>
@@ -188,7 +190,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const rpc = (fn, args, opts) => exo.rpc(SCHEMA, fn, args, opts);
 const toast = msg => exo.toast(msg);
 
-const STATUS_S = { watchlist: "Watchlist", watching: "Watching", up_to_date: "Up to date", paused: "Paused", finished: "Finished" };
+const STATUS_S = { watchlist: "Watchlist", new: "New", watching: "Watching", up_to_date: "Up to date", paused: "Paused", finished: "Finished" };
 const MOVIE_PAGE = 120;   // movies drawn per step; "Show more" adds the next
 
 let S = { today: null, movies: [], series: [] };
@@ -275,13 +277,15 @@ const tile = (x, kind) => `<button class="tile" data-${kind}="${x.id}">
 
 function renderSeries() {
   const by = st => S.series.filter(s => s.status === st);
+  const fresh = by("new").sort((a, b) => a.title.localeCompare(b.title));
   const watching = by("watching").sort((a, b) => (b.last_watched_on || "") < (a.last_watched_on || "") ? -1 : 1);
   // Up to date with new episodes out first.
   const upToDate = by("up_to_date").sort((a, b) => behind(b) - behind(a) || a.title.localeCompare(b.title));
   const paused = by("paused").sort((a, b) => a.title.localeCompare(b.title));
   const finished = by("finished").sort((a, b) => a.title.localeCompare(b.title));
-  if (!watching.length && !upToDate.length && !paused.length && !finished.length) return empty("No series yet", "Tap + to add one from IMDb");
+  if (!fresh.length && !watching.length && !upToDate.length && !paused.length && !finished.length) return empty("No series yet", "Tap + to add one from IMDb");
   let html = "";
+  if (fresh.length) html += title("New", fresh.length) + `<div class="rows">${fresh.map(srow).join("")}</div>`;
   if (watching.length) html += title("Watching", watching.length) + `<div class="watching">${watching.map(wcard).join("")}</div>`;
   if (upToDate.length) html += title("Up to date", upToDate.length) + `<div class="rows">${upToDate.map(srow).join("")}</div>`;
   if (paused.length) html += title("Paused", paused.length) + `<div class="rows">${paused.map(srow).join("")}</div>`;
