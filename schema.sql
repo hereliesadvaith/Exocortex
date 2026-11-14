@@ -83,7 +83,7 @@ from habits.habits h
 where h.active;
 
 -- ---- API ------------------------------------------------------------------------
--- Errors use SQLSTATEs PostgREST maps to HTTP: 23505 -> 409, P0002 -> 404,
+-- Errors use SQLSTATEs PostgREST maps to HTTP: 23505 -> 409, PT404 -> 404,
 -- 22023 -> 400; the page shows the message.
 
 -- Every habit (active first) with its status, plus the logs of the last `days` days.
@@ -163,7 +163,7 @@ begin
   where h.id = update_habit.habit_id
   returning h.id into found_id;
   if found_id is null then
-    raise exception 'No such habit' using errcode = 'P0002';
+    raise exception 'No such habit' using errcode = 'PT404';
   end if;
   return jsonb_build_object('id', found_id);
 exception
@@ -201,7 +201,7 @@ begin
   return result;
 exception
   when foreign_key_violation then
-    raise exception 'No such habit' using errcode = 'P0002';
+    raise exception 'No such habit' using errcode = 'PT404';
 end $$;
 
 create or replace function habits.delete_log(habit_id int, day date) returns void
