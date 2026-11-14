@@ -73,6 +73,7 @@ body {
   min-height: 100vh;
 }
 main {
+  overflow-x: clip;
   max-width: 760px;
   margin: 0 auto;
   padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
@@ -147,9 +148,14 @@ section { margin-bottom: 30px; }
 
 /* ---- MCP ---- */
 .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.mcp-head > div { min-width: 0; flex: 1; }
 .mcp-head p { margin: 0; }
-.state { font-size: clamp(44px, 14vw, 64px); line-height: 1; margin-top: 6px !important; text-transform: uppercase; }
-.state.pending { color: var(--red); }
+.state {
+  font-size: clamp(44px, 14vw, 64px); line-height: 1; margin-top: 6px !important; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* "Starting…" / "Stopping…" are longer than On/Off: smaller, so they fit beside the switch. */
+.state.pending { color: var(--red); font-size: clamp(26px, 7.5vw, 44px); line-height: calc(clamp(44px, 14vw, 64px)); }
 
 .switch {
   position: relative; width: 76px; height: 42px; flex: none; border-radius: 999px; cursor: pointer;
