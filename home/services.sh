@@ -75,7 +75,7 @@ pgrst_start() {
   PGRST_DB_POOL=4 \
   PGRST_SERVER_HOST=127.0.0.1 \
   PGRST_SERVER_PORT=$PGRST_PORT \
-  PGRST_SERVER_CORS_ALLOWED_ORIGINS="http://localhost:8080,http://127.0.0.1:8080" \
+  PGRST_SERVER_CORS_ALLOWED_ORIGINS="http://localhost,http://127.0.0.1,http://localhost:8080,http://127.0.0.1:8080" \
   PGRST_OPENAPI_MODE=disabled \
   PGRST_LOG_LEVEL=warn \
     nohup postgrest >> "$PGRST_LOG" 2>&1 < /dev/null &
@@ -126,7 +126,7 @@ case "${1:-}" in
   status)
     pg_up && echo "postgres: up" || echo "postgres: down"
     pgrst_up && echo "postgrest: up (pid $(cat "$PGRST_PID"))" || echo "postgrest: down"
-    nginx_up && echo "nginx: up (pid $(cat "$NGINX_PID")) http://localhost:8080/" || echo "nginx: down"
+    nginx_up && echo "nginx: up (pid $(cat "$NGINX_PID")) http://localhost/" || echo "nginx: down"
     ;;
   start-postgres) pg_start ;;
   restart-postgrest) pgrst_stop; pgrst_start ;;

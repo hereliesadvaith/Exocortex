@@ -4,7 +4,7 @@ A personal server on an Android phone, running natively in Termux (no PRoot):
 
 - an **MCP server** that gives an AI assistant a shell on the phone, published through an ngrok static domain and limited to allowlisted GitHub accounts;
 - **PostgreSQL** with PL/Python, for data;
-- a **home page** at `http://localhost:8080/` with your apps, an on/off switch for the MCP server, and the phone's status.
+- a **home page** at `http://localhost/` with your apps, an on/off switch for the MCP server, and the phone's status.
 
 Custom apps live on their own branches and plug into the home page; this branch (`main`) is the core.
 
@@ -14,7 +14,7 @@ Claude / any MCP client
    ▼
 ngrok static domain ──► ngrok agent ──► server.py (MCP, 127.0.0.1:8000) ──► bash
                                                    ▲ started/stopped by the switch
-phone browser ──► nginx 127.0.0.1:8080             │
+phone browser ──► nginx 127.0.0.1:80               │
                     ├─ /        home/public (static page)
                     ├─ /api/    PostgREST 127.0.0.1:3000 ──► Postgres 18 (schema "home",
                     │                                         PL/Python functions)
@@ -169,7 +169,7 @@ cd ~/exocortex && home/install.sh
 4. starts Postgres, applies `home/schema.sql`, restarts PostgREST, starts or reloads nginx;
 5. installs the boot script.
 
-Then open **http://localhost:8080/** on the phone.
+Then open **http://localhost/** on the phone (`http://localhost:8080/` works too). Apps are at `http://localhost/<app>/`.
 
 | Section | Shows |
 |---|---|
@@ -181,7 +181,7 @@ It refreshes every 5 seconds while it's open (every second while switching). Lig
 
 ### How it works
 
-- **nginx** (`127.0.0.1:8080`) serves `home/public/` and proxies `/api/` to PostgREST. It only listens on loopback, and `/api/` rejects requests whose `Origin` isn't `localhost:8080`, so a website open in the phone's browser can't call it.
+- **nginx** (`127.0.0.1:80`, and `:8080`) serves `home/public/` and proxies `/api/` to PostgREST. Android lets apps listen on port 80 (not on most low ports, such as 53). nginx only listens on loopback, and `/api/` rejects requests whose `Origin` isn't `localhost`, so a website open in the phone's browser can't call it.
 - **PostgREST** (`127.0.0.1:3000`) logs in over the local socket as `home_api` and serves schema `home` as `home_web`, which can only read `home.apps` and call two functions.
 - **`home.status()`** and **`home.mcp_set(enabled)`** are PL/Python `SECURITY DEFINER` functions, so they run as the Termux user: they read `/proc`, PID files and logs, and `mcp_set` runs `start.sh -d` or `stop` detached. Only one switch runs at a time.
 
@@ -236,5 +236,5 @@ on conflict (id) do update set name = excluded.name, path = excluded.path,
 ## Security notes
 
 - Anyone you allowlist can run any command on the phone with Termux's rights, including reading `.env` and `~/.pgpass`, so keep the allowlist to yourself.
-- The home page and its API are reachable only from the phone (loopback), and only the page itself can call the API from a browser. Any app installed on the phone could still call `localhost:8080/api/` directly, including the MCP switch.
+- The home page and its API are reachable only from the phone (loopback), and only the page itself can call the API from a browser. Any app installed on the phone could still call `localhost/api/` directly, including the MCP switch.
 - Never commit `.env`. It holds your OAuth secret and ngrok token.

@@ -127,7 +127,7 @@ services = [{
 ng_pid = pid_in(f"{PREFIX}/tmp/nginx.pid")
 services.append({
     "id": "nginx", "name": "nginx", "ok": alive(ng_pid, "nginx"),
-    "since": mtime(f"{PREFIX}/tmp/nginx.pid"), "detail": "127.0.0.1:8080",
+    "since": mtime(f"{PREFIX}/tmp/nginx.pid"), "detail": "localhost:80",
     "mem": mem_of(lambda c: c.startswith("nginx")),
 })
 
