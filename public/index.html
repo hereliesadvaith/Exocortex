@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f0f0ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="referrer" content="no-referrer">
+<title>TV Time</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23d71921'/%3E%3C/svg%3E">
+<link rel="preload" href="/fonts/doto.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/ui.css">
+<script src="/ui.js"></script>
+<style>
+main { padding-bottom: 110px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-bottom: 14px; background: var(--line); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.stats div { background: var(--card); padding: 12px 14px; }
+.stats b { display: block; font: 800 24px/1 var(--display); }
+.stats span { display: block; margin-top: 5px; font: 10px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.search { position: relative; margin-bottom: 12px; }
+.search .mag { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input[type="search"] { padding: 13px 46px 13px 44px; border-radius: 999px; background: var(--card); -webkit-appearance: none; appearance: none; }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+.tabs .n { margin-left: 5px; opacity: 0.6; font-weight: 400; }
+
+/* Posters: IMDb's image server, resized by the URL; a dot-matrix letter when there's none. */
+.poster { position: relative; display: block; flex: none; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: var(--dot-off); }
+.poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster .ph { position: absolute; inset: 0; display: grid; place-items: center; font: 800 28px/1 var(--display); color: var(--muted); }
+
+/* Watching: big cards with progress and +1 */
+.watching { display: grid; gap: 10px; }
+.wcard { display: flex; gap: 14px; align-items: center; padding: 12px; border: 1px solid var(--line); background: var(--card); border-radius: 22px; }
+.wcard .poster { width: 64px; }
+.wcard .info { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 0; }
+.wcard .t { font-weight: 650; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
+.meta { margin-top: 3px; font: 10.5px/1.35 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.prog { margin-top: 8px; display: flex; align-items: baseline; gap: 6px; }
+.prog b { font: 800 20px/1 var(--display); }
+.prog span { font: 11px/1 var(--mono); color: var(--muted); }
+.bar { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin-top: 7px; }
+.bar i { aspect-ratio: 1; border-radius: 50%; background: var(--dot-off); }
+.bar i.on { background: var(--text); }
+.plus { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--text); color: var(--bg); display: grid; place-items: center; font: 800 13px/1 var(--display); }
+.plus:active { transform: scale(0.92); }
+.new { color: var(--red); }
+
+/* Compact rows: up to date, paused, watchlist */
+.rows { background: var(--card); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px; border: 0; background: transparent; text-align: left; }
+.row + .row { border-top: 1px dotted var(--line); }
+.row .poster { width: 38px; border-radius: 8px; }
+.row .poster .ph { font-size: 16px; }
+.row .info { flex: 1; min-width: 0; }
+.row .t { font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.row .r { flex: none; font: 11px/1 var(--mono); color: var(--muted); text-align: right; }
+.row .r b { display: block; font: 800 16px/1 var(--display); color: var(--text); }
+
+/* Poster grids: finished series, movies */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 14px 10px; }
+.tile { border: 0; background: transparent; padding: 0; text-align: left; min-width: 0; }
+.tile .t { margin-top: 6px; font-size: 12.5px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile .y { margin-top: 2px; font: 10px/1 var(--mono); color: var(--muted); }
+.tile .rw { position: absolute; top: 6px; right: 6px; padding: 3px 6px; border-radius: 999px; background: var(--text); color: var(--bg); font: 700 9px/1 var(--mono); }
+.more { display: block; width: 100%; margin-top: 12px; }
+
+/* Dialogs */
+.detail-head { display: flex; gap: 14px; align-items: flex-start; }
+.detail-head .poster { width: 96px; }
+.detail-head h2 { font-size: 22px; line-height: 1.05; }
+.detail-head .meta { margin-top: 8px; }
+.imdb { display: inline-block; margin-top: 10px; font: 700 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); text-decoration: none; }
+.counter { display: flex; align-items: center; gap: 10px; }
+.counter input { text-align: center; font: 800 22px/1 var(--display) !important; }
+.counter button { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--text); background: transparent; font-size: 22px; line-height: 1; }
+.seg.five span { padding-left: 2px; padding-right: 2px; font-size: 9.5px; }
+.results { display: grid; gap: 2px; max-height: 52vh; overflow-y: auto; }
+.result { display: flex; gap: 12px; align-items: center; padding: 8px 2px; border-top: 1px dotted var(--line); }
+.result .poster { width: 44px; border-radius: 8px; }
+.result .info { flex: 1; min-width: 0; }
+.result .t { font-size: 15px; line-height: 1.25; }
+.result .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.result .acts .btn { padding: 8px 12px; font-size: 10px; }
+.hint { font: 11px/1.4 var(--mono); color: var(--muted); }
+dialog h2:focus { outline: none; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">Home</a>
+  <header class="app-top">
+    <div>
+      <h1>TV Time</h1>
+      <p class="sub" id="date">&nbsp;</p>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="search" role="search">
+    <svg class="mag" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search your movies and series" aria-label="Search" autocomplete="off" enterkeyhint="search">
+    <button type="button" class="icon-btn clear" id="qClear" aria-label="Clear search" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="series">Series</button>
+    <button role="tab" data-tab="movies">Movies</button>
+    <button role="tab" data-tab="watchlist">Watchlist</button>
+  </div>
+
+  <div id="list"></div>
+</main>
+
+<button class="fab" id="add" aria-label="Add a movie or series">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<dialog id="addDialog">
+  <form method="dialog" id="addForm">
+    <h2 tabindex="-1" autofocus>Add</h2>
+    <label>Search IMDb <input name="q" type="search" autocomplete="off" placeholder="A title, or an IMDb link / tt id" enterkeyhint="search"></label>
+    <div class="results" id="results"><p class="hint">Movies and series from IMDb, with their posters.</p></div>
+    <div class="actions"><button type="button" class="btn" data-close>Close</button></div>
+  </form>
+</dialog>
+
+<dialog id="movieDialog">
+  <form method="dialog" id="movieForm">
+    <div class="detail-head" id="movieHead"></div>
+    <div class="field">Status
+      <div class="seg">
+        <label><input type="radio" name="status" value="watchlist"><span>Watchlist</span></label>
+        <label><input type="radio" name="status" value="watched"><span>Watched</span></label>
+      </div>
+    </div>
+    <div class="two">
+      <label>Watched on <input name="watched_on" type="date"></label>
+      <div class="field">Rewatches
+        <div class="counter"><button type="button" data-step="-1" aria-label="One fewer">−</button><input name="rewatch_count" type="number" min="0" inputmode="numeric"><button type="button" data-step="1" aria-label="One more">+</button></div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="left"><button type="button" class="btn danger" id="deleteMovie">Delete</button></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="seriesDialog">
+  <form method="dialog" id="seriesForm">
+    <div class="detail-head" id="seriesHead"></div>
+    <div class="field">Status
+      <div class="seg five">
+        <label><input type="radio" name="status" value="watchlist"><span>List</span></label>
+        <label><input type="radio" name="status" value="watching"><span>Watching</span></label>
+        <label><input type="radio" name="status" value="up_to_date"><span>Up to date</span></label>
+        <label><input type="radio" name="status" value="paused"><span>Paused</span></label>
+        <label><input type="radio" name="status" value="finished"><span>Finished</span></label>
+      </div>
+    </div>
+    <div class="two">
+      <div class="field">Episodes watched
+        <div class="counter"><button type="button" data-step="-1" aria-label="One fewer">−</button><input name="episodes_watched" type="number" min="0" inputmode="numeric"><button type="button" data-step="1" aria-label="One more">+</button></div>
+      </div>
+      <label>Total episodes <input name="total_episodes" type="number" min="0" inputmode="numeric" placeholder="From IMDb"></label>
+    </div>
+    <div class="actions">
+      <div class="left"><button type="button" class="btn danger" id="deleteSeries">Delete</button></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const SCHEMA = "tvtime";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rpc = (fn, args, opts) => exo.rpc(SCHEMA, fn, args, opts);
+const toast = msg => exo.toast(msg);
+
+const STATUS_S = { watchlist: "Watchlist", watching: "Watching", up_to_date: "Up to date", paused: "Paused", finished: "Finished" };
+const MOVIE_PAGE = 120;   // movies drawn per step; "Show more" adds the next
+
+let S = { today: null, movies: [], series: [] };
+let tab = "series", query = "", movieLimit = MOVIE_PAGE;
+try { tab = localStorage.getItem("tvtime.tab") || tab; } catch (e) {}
+if (!["series", "movies", "watchlist"].includes(tab)) tab = "series";
+
+const toDate = s => new Date(s + "T00:00:00Z");
+const fmtDay = (s, opts) => toDate(s).toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
+const pad2 = n => String(n).padStart(2, "0");
+
+// IMDb image URLs take a size: ..._V1_UX180_.jpg is 180 px wide.
+const sized = (url, w) => url ? url.replace(/\._V1_.*\.(jpg|png)$/i, `._V1_UX${w}_.$1`) : null;
+const poster = (x, w = 180) => `<span class="poster">${x.poster_url
+  ? `<img src="${esc(sized(x.poster_url, w))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+  : `<span class="ph">${esc((x.title || "?").slice(0, 1).toUpperCase())}</span>`}</span>`;
+const years = s => s.year ? (s.end_year ? (s.end_year === s.year ? `${s.year}` : `${s.year}–${s.end_year}`) : `${s.year}–`) : "";
+const genres = x => (x.genres || []).slice(0, 3).join(" · ");
+const runtime = m => m ? (m >= 60 ? `${Math.floor(m / 60)}h ${pad2(m % 60)}m` : `${m}m`) : "";
+const behind = s => s.total_episodes != null ? Math.max(0, s.total_episodes - s.episodes_watched) : 0;
+
+async function load() {
+  try {
+    S = await rpc("state", {}, { read: true });
+    render();
+  } catch (e) {
+    toast("Couldn't load: " + e.message);
+  }
+}
+
+// ---- render -----------------------------------------------------------------------
+
+function render() {
+  $("#date").textContent = S.today ? fmtDay(S.today, { weekday: "short", day: "2-digit", month: "short" }) : " ";
+  const year = (S.today || "").slice(0, 4);
+  const watching = S.series.filter(s => s.status === "watching").length;
+  const moviesYear = S.movies.filter(m => m.status === "watched" && (m.watched_on || "").startsWith(year)).length;
+  const eps = S.series.reduce((n, s) => n + s.episodes_watched, 0);
+  $("#stats").innerHTML = `<div><b>${pad2(watching)}</b><span>watching</span></div>
+    <div><b>${pad2(moviesYear)}</b><span>movies in ${year}</span></div>
+    <div><b>${eps.toLocaleString()}</b><span>episodes</span></div>`;
+
+  const wl = S.movies.filter(m => m.status === "watchlist").length + S.series.filter(s => s.status === "watchlist").length;
+  const counts = { series: S.series.filter(s => s.status !== "watchlist").length, movies: S.movies.filter(m => m.status === "watched").length, watchlist: wl };
+  const names = { series: "Series", movies: "Movies", watchlist: "Watchlist" };
+  document.querySelectorAll("#tabs button").forEach(b => {
+    b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    const n = counts[b.dataset.tab];
+    b.innerHTML = `${names[b.dataset.tab]}${n ? `<span class="n">${n}</span>` : ""}`;
+  });
+  $("#list").innerHTML = query ? renderSearch() : ({ series: renderSeries, movies: renderMovies, watchlist: renderWatchlist })[tab]();
+}
+
+const title = (t, n, cls = "") => `<h2 class="section-title ${cls}">${esc(t)} <span class="count">${pad2(n)}</span></h2>`;
+const empty = (head, text) => `<div class="empty-state"><p class="display">${esc(head)}</p><p>${esc(text)}</p></div>`;
+
+function wcard(s) {
+  const total = s.total_episodes;
+  const on = total ? Math.min(20, Math.round(s.episodes_watched / total * 20)) : 0;
+  return `<div class="wcard">
+    ${poster(s)}
+    <button class="info" data-series="${s.id}">
+      <div class="t">${esc(s.title)}</div>
+      <div class="meta">${esc([years(s), genres(s)].filter(Boolean).join(" · "))}</div>
+      <div class="prog"><b>${s.episodes_watched}</b><span>${total != null ? `/ ${total} episodes` : "episodes"}</span></div>
+      ${total ? `<div class="bar">${Array.from({ length: 20 }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</div>` : ""}
+    </button>
+    <button class="plus" data-ep="${s.id}" aria-label="Watched one more episode of ${esc(s.title)}">+1</button>
+  </div>`;
+}
+
+function srow(s) {
+  const b = behind(s);
+  const right = s.status === "up_to_date" && b ? `<span class="r new"><b class="new">${b}</b>new</span>`
+    : `<span class="r"><b>${s.episodes_watched}</b>${s.total_episodes != null && s.status !== "up_to_date" ? `of ${s.total_episodes}` : "eps"}</span>`;
+  return `<button class="row" data-series="${s.id}">${poster(s, 120)}
+    <span class="info"><span class="t">${esc(s.title)}</span><span class="meta" style="display:block">${esc([years(s), genres(s)].filter(Boolean).join(" · "))}</span></span>
+    ${right}</button>`;
+}
+
+const tile = (x, kind) => `<button class="tile" data-${kind}="${x.id}">
+  <span style="position:relative;display:block">${poster(x)}${x.rewatch_count ? `<span class="rw">×${x.rewatch_count + 1}</span>` : ""}</span>
+  <div class="t">${esc(x.title)}</div><div class="y">${esc(kind === "series" ? years(x) : x.year || "")}</div></button>`;
+
+function renderSeries() {
+  const by = st => S.series.filter(s => s.status === st);
+  const watching = by("watching").sort((a, b) => (b.last_watched_on || "") < (a.last_watched_on || "") ? -1 : 1);
+  // Up to date with new episodes out first.
+  const upToDate = by("up_to_date").sort((a, b) => behind(b) - behind(a) || a.title.localeCompare(b.title));
+  const paused = by("paused").sort((a, b) => a.title.localeCompare(b.title));
+  const finished = by("finished").sort((a, b) => a.title.localeCompare(b.title));
+  if (!watching.length && !upToDate.length && !paused.length && !finished.length) return empty("No series yet", "Tap + to add one from IMDb");
+  let html = "";
+  if (watching.length) html += title("Watching", watching.length) + `<div class="watching">${watching.map(wcard).join("")}</div>`;
+  if (upToDate.length) html += title("Up to date", upToDate.length) + `<div class="rows">${upToDate.map(srow).join("")}</div>`;
+  if (paused.length) html += title("Paused", paused.length) + `<div class="rows">${paused.map(srow).join("")}</div>`;
+  if (finished.length) html += title("Finished", finished.length) + `<div class="grid">${finished.map(s => tile(s, "series")).join("")}</div>`;
+  return html;
+}
+
+function renderMovies() {
+  const watched = S.movies.filter(m => m.status === "watched").sort((a, b) => (b.watched_on || "") < (a.watched_on || "") ? -1 : (b.watched_on || "") > (a.watched_on || "") ? 1 : b.id - a.id);
+  if (!watched.length) return empty("No movies yet", "Tap + to add one from IMDb");
+  const shown = watched.slice(0, movieLimit);
+  const months = new Map();
+  for (const m of shown) {
+    const k = (m.watched_on || "").slice(0, 7) || "unknown";
+    (months.get(k) || months.set(k, []).get(k)).push(m);
+  }
+  const total = k => watched.filter(m => (m.watched_on || "").slice(0, 7) === k).length;
+  let html = "";
+  for (const [k, ms] of months) {
+    const label = k === "unknown" ? "No date" : fmtDay(k + "-01", { month: "long", year: "numeric" });
+    html += title(label, total(k)) + `<div class="grid">${ms.map(m => tile(m, "movie")).join("")}</div>`;
+  }
+  if (watched.length > shown.length) html += `<button class="btn more" id="more">Show more · ${watched.length - shown.length} left</button>`;
+  return html;
+}
+
+function renderWatchlist() {
+  const series = S.series.filter(s => s.status === "watchlist").sort((a, b) => a.title.localeCompare(b.title));
+  const movies = S.movies.filter(m => m.status === "watchlist").sort((a, b) => a.title.localeCompare(b.title));
+  if (!series.length && !movies.length) return empty("Watchlist is empty", "Add things to watch with +");
+  let html = "";
+  if (series.length) html += title("Series", series.length) + `<div class="grid">${series.map(s => tile(s, "series")).join("")}</div>`;
+  if (movies.length) html += title("Movies", movies.length) + `<div class="grid">${movies.map(m => tile(m, "movie")).join("")}</div>`;
+  return html;
+}
+
+function renderSearch() {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = x => { const t = `${x.title} ${x.year || ""} ${(x.genres || []).join(" ")}`.toLowerCase(); return words.every(w => t.includes(w)); };
+  const series = S.series.filter(hit), movies = S.movies.filter(hit);
+  if (!series.length && !movies.length) return empty("No matches", `Nothing in your lists matches “${query}”. Tap + to search IMDb`);
+  return (series.length ? title("Series", series.length) + `<div class="rows">${series.map(srow).join("")}</div>` : "")
+    + (movies.length ? title("Movies", movies.length) + `<div class="grid">${movies.map(m => tile(m, "movie")).join("")}</div>` : "");
+}
+
+// ---- actions ----------------------------------------------------------------------
+
+async function plusOne(id) {
+  const s = S.series.find(x => x.id === id);
+  if (!s) return;
+  s.episodes_watched += 1;   // show it right away
+  render();
+  try {
+    const saved = await rpc("episode", { series_id: id, delta: 1 });
+    if (saved.status !== "watching") toast(`${saved.title}: ${STATUS_S[saved.status].toLowerCase()}`);
+  } catch (e) { toast("Not saved: " + e.message); }
+  load();
+}
+
+$("#list").addEventListener("click", e => {
+  const ep = e.target.closest("[data-ep]");
+  if (ep) return plusOne(Number(ep.dataset.ep));
+  if (e.target.closest("#more")) { movieLimit += MOVIE_PAGE * 2; return render(); }
+  const s = e.target.closest("[data-series]");
+  if (s) return openSeries(S.series.find(x => x.id === Number(s.dataset.series)));
+  const m = e.target.closest("[data-movie]");
+  if (m) return openMovie(S.movies.find(x => x.id === Number(m.dataset.movie)));
+});
+
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.tab;
+  try { localStorage.setItem("tvtime.tab", tab); } catch (e) {}
+  if (query) clearSearch(); else render();
+  window.scrollTo({ top: 0 });
+}));
+
+$("#q").addEventListener("input", e => { query = e.target.value.trim(); $("#qClear").hidden = !e.target.value; render(); });
+$("#q").addEventListener("keydown", e => { if (e.key === "Escape") clearSearch(); if (e.key === "Enter") e.target.blur(); });
+function clearSearch() { $("#q").value = ""; query = ""; $("#qClear").hidden = true; render(); }
+$("#qClear").addEventListener("click", () => { clearSearch(); $("#q").focus(); });
+
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
+document.querySelectorAll(".counter").forEach(c => c.addEventListener("click", e => {
+  const b = e.target.closest("[data-step]");
+  if (!b) return;
+  const input = c.querySelector("input");
+  input.value = Math.max(0, (Number(input.value) || 0) + Number(b.dataset.step));
+}));
+
+function head(x, kind) {
+  const bits = kind === "series"
+    ? [years(x), x.runtime_min ? `${runtime(x.runtime_min)} episodes` : "", genres(x)]
+    : [x.year, runtime(x.runtime_min), genres(x)];
+  return `${poster(x, 300)}<div><h2 tabindex="-1" autofocus>${esc(x.title)}</h2>
+    <div class="meta">${esc(bits.filter(Boolean).join(" · "))}</div>
+    ${x.imdb_id ? `<a class="imdb" href="https://www.imdb.com/title/${esc(x.imdb_id)}/" target="_blank" rel="noopener noreferrer">IMDb ↗</a>` : ""}</div>`;
+}
+
+// ---- movie dialog -----------------------------------------------------------------
+
+let movie = null;
+const mf = $("#movieForm");
+function openMovie(m) {
+  movie = m;
+  mf.reset();
+  $("#movieHead").innerHTML = head(m, "movie");
+  mf.status.value = m.status;
+  mf.watched_on.value = m.watched_on || "";
+  mf.rewatch_count.value = m.rewatch_count;
+  $("#movieDialog").showModal();
+}
+mf.addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    await rpc("update_movie", { movie_id: movie.id, patch: {
+      status: mf.status.value, watched_on: mf.watched_on.value || null, rewatch_count: Number(mf.rewatch_count.value) || 0 } });
+    $("#movieDialog").close();
+    load();
+  } catch (err) { toast(err.message); }
+});
+$("#deleteMovie").addEventListener("click", async () => {
+  if (!movie || !confirm(`Remove "${movie.title}" from your movies?`)) return;
+  try { await rpc("delete_movie", { movie_id: movie.id }); $("#movieDialog").close(); load(); } catch (e) { toast(e.message); }
+});
+
+// ---- series dialog ----------------------------------------------------------------
+
+let series = null;
+const sf = $("#seriesForm");
+function openSeries(s) {
+  series = s;
+  sf.reset();
+  $("#seriesHead").innerHTML = head(s, "series");
+  sf.status.value = s.status;
+  sf.episodes_watched.value = s.episodes_watched;
+  sf.total_episodes.value = s.total_episodes ?? "";
+  $("#seriesDialog").showModal();
+}
+sf.addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    await rpc("update_series", { series_id: series.id, patch: {
+      status: sf.status.value, episodes_watched: Number(sf.episodes_watched.value) || 0,
+      total_episodes: sf.total_episodes.value === "" ? null : Number(sf.total_episodes.value) } });
+    $("#seriesDialog").close();
+    load();
+  } catch (err) { toast(err.message); }
+});
+$("#deleteSeries").addEventListener("click", async () => {
+  if (!series || !confirm(`Remove "${series.title}" from your series?`)) return;
+  try { await rpc("delete_series", { series_id: series.id }); $("#seriesDialog").close(); load(); } catch (e) { toast(e.message); }
+});
+
+// ---- add from IMDb ------------------------------------------------------------------
+
+const af = $("#addForm");
+let searchTimer = null, lastResults = [];
+$("#add").addEventListener("click", () => {
+  af.reset();
+  $("#results").innerHTML = `<p class="hint">Movies and series from IMDb, with their posters.</p>`;
+  $("#addDialog").showModal();
+  af.q.focus();
+});
+af.q.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  const q = af.q.value.trim();
+  if (q.length < 2) return;
+  searchTimer = setTimeout(() => search(q), 350);
+});
+af.addEventListener("submit", e => { e.preventDefault(); search(af.q.value.trim()); });
+
+async function search(q) {
+  $("#results").innerHTML = `<p class="hint">Searching…</p>`;
+  try {
+    lastResults = await rpc("search", { q }, { read: true });
+    if (af.q.value.trim() !== q) return;   // a newer search is on its way
+    $("#results").innerHTML = lastResults.length ? lastResults.map((r, i) => `<div class="result">${poster(r, 120)}
+      <div class="info"><div class="t">${esc(r.title)}</div>
+        <div class="meta">${esc([r.years || r.year, r.type, r.cast].filter(Boolean).join(" · "))}</div></div>
+      <div class="acts">${r.in_list ? `<span class="hint">In your ${r.in_list === "movie" ? "movies" : "series"}</span>`
+        : r.kind === "movie"
+          ? `<button type="button" class="btn primary" data-add="${i}" data-status="watched">Watched</button><button type="button" class="btn" data-add="${i}" data-status="watchlist">Watchlist</button>`
+          : `<button type="button" class="btn primary" data-add="${i}" data-status="watching">Watching</button><button type="button" class="btn" data-add="${i}" data-status="watchlist">Watchlist</button>`}
+      </div></div>`).join("") : `<p class="hint">Nothing on IMDb matches “${esc(q)}”.</p>`;
+  } catch (e) {
+    $("#results").innerHTML = `<p class="hint">${esc(e.message)}</p>`;
+  }
+}
+
+$("#results").addEventListener("click", async e => {
+  const b = e.target.closest("[data-add]");
+  if (!b) return;
+  const r = lastResults[Number(b.dataset.add)];
+  const status = b.dataset.status;
+  b.disabled = true;
+  try {
+    const args = { imdb_id: r.imdb_id, title: r.title, year: r.year || null, poster_url: r.poster_url || null, status };
+    if (r.kind === "movie") await rpc("add_movie", args); else await rpc("add_series", args);
+    r.in_list = r.kind;
+    b.closest(".acts").innerHTML = `<span class="hint">Added</span>`;
+    toast(`${r.title}: ${status === "watched" ? "watched today" : status === "watching" ? "watching" : "on your watchlist"}`);
+    load();
+  } catch (err) { b.disabled = false; toast(err.message); }
+});
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+load();
+</script>
+</body>
+</html>
