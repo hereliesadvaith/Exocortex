@@ -118,8 +118,9 @@ start_ngrok() {
     export SSL_CERT_FILE=$PREFIX/etc/tls/cert.pem
   fi
   # NGROK_AUTHTOKEN is read from the environment.
+  # warn level: info would also log every status poll of the local API.
   nohup "$NGROK_BIN" http "127.0.0.1:$PORT" --url "https://$NGROK_DOMAIN" \
-    --log stdout --log-format logfmt >> ngrok.log 2>&1 &
+    --log stdout --log-format logfmt --log-level warn >> ngrok.log 2>&1 &
   echo $! > ngrok.pid
   local url
   for _ in $(seq 20); do
@@ -130,8 +131,9 @@ start_ngrok() {
     alive ngrok.pid || break
     sleep 1
   done
-  echo "ngrok didn't come up, see ngrok.log" >&2
-  tail -10 ngrok.log >&2 || true
+  echo "ngrok didn't come up; its errors (full log: ngrok.log):" >&2
+  sed -n "$(grep -n '===== .* starting ngrok' ngrok.log | tail -1 | cut -d: -f1),\$p" ngrok.log \
+    | grep -vE 'netlinkrib' | grep -E 'lvl=(eror|crit|warn)|ERR_NGROK' | tail -8 >&2 || true
   stop_pid ngrok.pid ngrok >/dev/null
   return 1
 }
