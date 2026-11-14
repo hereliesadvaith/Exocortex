@@ -179,6 +179,12 @@ update() {
   if start_server; then
     start_ngrok || true
     log "update ok: now at ${new:0:7}"
+    # The home page's static files are served straight from the checkout; its schema,
+    # nginx config, PostgREST and boot script are applied by home/install.sh.
+    if [[ -x home/install.sh ]] && ! git diff --quiet "$old" "$new" -- home termux-boot postgres; then
+      log "home page changed, running home/install.sh"
+      bash home/install.sh || log "home/install.sh failed; the MCP server is fine, fix the home page by hand" >&2
+    fi
     return 0
   fi
 

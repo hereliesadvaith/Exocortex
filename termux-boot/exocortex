@@ -1,6 +1,14 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# Termux:Boot runs this after the phone boots. Install it with:
-#   mkdir -p ~/.termux/boot && cp ~/exocortex/termux-boot/exocortex ~/.termux/boot/ && chmod +x ~/.termux/boot/exocortex
+# Termux:Boot runs this after the phone boots. home/install.sh installs it as
+# ~/.termux/boot/exocortex; to install it by hand:
+#   mkdir -p ~/.termux/boot && cp ~/exocortex/termux-boot/exocortex ~/.termux/boot/ && chmod 700 ~/.termux/boot/exocortex
 termux-wake-lock
-sleep 10   # give Wi-Fi/mobile data a moment so ngrok can connect
-exec ~/exocortex/start.sh -d >> ~/exocortex/boot.log 2>&1
+cd ~/exocortex || exit 1
+{
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') boot"
+  # Postgres, PostgREST, nginx: the home page at http://localhost:8080/
+  bash home/services.sh start
+  # The MCP server and ngrok need the network; give Wi-Fi/mobile data a moment.
+  sleep 10
+  bash start.sh -d
+} >> ~/exocortex/boot.log 2>&1

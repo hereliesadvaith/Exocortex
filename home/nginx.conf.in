@@ -1,0 +1,37 @@
+# Template: install.sh fills in @REPO@ and @PREFIX@ and writes the result to
+# $PREFIX/etc/nginx/exocortex.conf. Edit this file, not the generated one.
+
+server {
+    # Loopback only: other devices on the network can't reach it.
+    listen 127.0.0.1:8080 default_server;
+    server_name localhost;
+    absolute_redirect off;
+    server_tokens off;
+
+    root @REPO@/home/public;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "no-cache";
+    }
+
+    location /fonts/ {
+        add_header Cache-Control "public, max-age=2592000";
+    }
+
+    # PostgREST. Browsers send an Origin header on cross-site requests, so this only
+    # lets the page itself (and tools that send no Origin, like curl) call the API: a
+    # website open in the phone's browser can't reach http://localhost:8080/api/.
+    location /api/ {
+        if ($http_origin !~ "^(https?://(localhost|127\.0\.0\.1)(:8080)?)?$") {
+            return 403;
+        }
+        proxy_pass http://127.0.0.1:3000/;
+        proxy_set_header Host $host;
+        proxy_read_timeout 20s;
+    }
+
+    # Custom apps: each drops a file of `location /<app>/ { ... }` blocks here.
+    include @PREFIX@/etc/nginx/apps.d/*.conf;
+}
