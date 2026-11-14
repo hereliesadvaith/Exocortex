@@ -128,6 +128,7 @@ case "${1:-}" in
     pgrst_up && echo "postgrest: up (pid $(cat "$PGRST_PID"))" || echo "postgrest: down"
     nginx_up && echo "nginx: up (pid $(cat "$NGINX_PID")) http://localhost:8080/" || echo "nginx: down"
     ;;
+  start-postgres) pg_start ;;
   restart-postgrest) pgrst_stop; pgrst_start ;;
-  *) echo "usage: $0 start|stop|restart|status|restart-postgrest" >&2; exit 2 ;;
+  *) echo "usage: $0 start|stop|restart|status|start-postgres|restart-postgrest" >&2; exit 2 ;;
 esac

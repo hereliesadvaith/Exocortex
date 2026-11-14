@@ -48,7 +48,7 @@ create or replace function home.status() returns jsonb
 language plpython3u stable security definer
 set search_path = pg_catalog, home
 as $py$
-import concurrent.futures, json, os, re, shutil, subprocess, time, urllib.error, urllib.request
+import ast, calendar, concurrent.futures, json, os, re, shutil, subprocess, time, urllib.error, urllib.request
 
 HOME = os.path.expanduser("~")
 REPO = os.path.join(HOME, "exocortex")
@@ -173,10 +173,12 @@ for line in (read(f"{REPO}/server.log", 512 * 1024) or "").splitlines():
         continue
     m = shell_re.match(line)
     if m:
-        cmd = m.group(2)
-        if len(cmd) >= 2 and cmd[0] == cmd[-1] and cmd[0] in "'\"":
-            cmd = cmd[1:-1]
-        commands.append({"at": stamp, "cwd": m.group(1), "command": cmd[:300]})
+        # server.py logs the command as a Python string literal (repr); decode it.
+        try:
+            cmd = ast.literal_eval(m.group(2))
+        except (ValueError, SyntaxError):
+            cmd = m.group(2)
+        commands.append({"at": stamp, "cwd": m.group(1), "command": str(cmd)[:400]})
 
 def to_epoch(s):
     return time.mktime(time.strptime(s, "%Y-%m-%d %H:%M:%S")) if s else None
@@ -238,16 +240,40 @@ system = {
     "ours": sum(rss for _, rss in procs.values()),
 }
 
-# ---- recent errors ----------------------------------------------------------------
+# ---- recent errors (last 24 hours) ----------------------------------------------------
+# Each log has its own timestamp format; local-time ones are read in the phone's zone.
+STAMPS = [
+    (re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)"), "%Y-%m-%d %H:%M:%S", False),        # server.log, postgres
+    (re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d)"), "%Y/%m/%d %H:%M:%S", False),        # nginx
+    (re.compile(r"^(\d\d/\w{3}/\d{4}:\d\d:\d\d:\d\d) \+0000"), "%d/%b/%Y:%H:%M:%S", True),  # postgrest (UTC)
+    (re.compile(r"^t=(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\+0000"), "%Y-%m-%dT%H:%M:%S", True),  # ngrok (UTC)
+]
+def stamp_of(line):
+    for rx, fmt, utc in STAMPS:
+        m = rx.match(line)
+        if m:
+            try:
+                t = time.strptime(m.group(1), fmt)
+                return calendar.timegm(t) if utc else time.mktime(t)
+            except ValueError:
+                return None
+    return None
+
+CUTOFF = time.time() - 24 * 3600
 def errors_in(path, pattern, skip=None, n=3):
-    out = []
-    for line in (read(path, 128 * 1024) or "").splitlines():
-        if pattern.search(line) and not (skip and skip.search(line)):
-            line = line.strip()[:300]
-            if out and out[-1]["line"] == line:
-                out[-1]["count"] += 1
-            else:
-                out.append({"line": line, "count": 1})
+    out, at = [], None
+    for line in (read(path, 256 * 1024) or "").splitlines():
+        at = stamp_of(line) or at   # lines without a stamp belong to the last one seen
+        if not pattern.search(line) or (skip and skip.search(line)):
+            continue
+        if at is not None and at < CUTOFF:
+            continue
+        line = line.strip()[:300]
+        if out and out[-1]["line"] == line:
+            out[-1]["count"] += 1
+            out[-1]["at"] = at
+        else:
+            out.append({"line": line, "count": 1, "at": at})
     return out[-n:]
 
 sources = [

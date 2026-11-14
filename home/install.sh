@@ -57,9 +57,9 @@ EOF
 
 # ---- services + schema --------------------------------------------------------------
 log "starting Postgres"
-bash "$HOME_DIR/services.sh" start >/dev/null 2>&1 || true   # PostgREST may fail until the schema exists
+bash "$HOME_DIR/services.sh" start-postgres
 log "applying home/schema.sql"
-psql -U postgres -X -q -v ON_ERROR_STOP=1 -f "$HOME_DIR/schema.sql"
+PGOPTIONS="-c client_min_messages=warning" psql -U postgres -X -q -v ON_ERROR_STOP=1 -f "$HOME_DIR/schema.sql"
 log "restarting PostgREST, reloading nginx"
 bash "$HOME_DIR/services.sh" restart-postgrest
 bash "$HOME_DIR/services.sh" start

@@ -180,12 +180,13 @@ function renderSystem(s, services, errors) {
   const errCount = errors.reduce((n, e) => n + e.errors.length, 0);
   const errBlock = errCount
     ? h("details", { class: "errors" },
-        h("summary", {}, dot("down"), `Recent errors · ${errCount}`),
+        h("summary", {}, dot("down"), `Errors, last 24h · ${errCount}`),
         ...errors.map((e) => [
           h("div", { class: "src", title: e.file }, e.source),
-          ...e.errors.map((x) => h("pre", {}, x.line, x.count > 1 ? h("span", { class: "x" }, `  ×${x.count}`) : null)),
+          ...e.errors.map((x) => h("pre", {}, x.line,
+            h("span", { class: "x" }, [x.count > 1 ? `  ×${x.count}` : "", x.at ? `  ${ago(x.at)}` : ""].join("")))),
         ]))
-    : h("p", { class: "mono small muted", style: "margin:18px 0 0" }, "No recent errors");
+    : h("p", { class: "mono small muted", style: "margin:18px 0 0" }, "No errors in the last 24 hours");
 
   box.replaceChildren(
     h("div", { class: "device" },
