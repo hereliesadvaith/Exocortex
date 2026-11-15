@@ -311,6 +311,7 @@ sources = [
     ("PostgREST", f"{REPO}/home/postgrest.log", re.compile(r"(?i)\berror\b|FATAL"), None),
     ("PostgreSQL", f"{PREFIX}/var/log/postgresql.log", re.compile(r"\b(ERROR|FATAL|PANIC):"), None),
     ("nginx", f"{PREFIX}/var/log/nginx/error.log", re.compile(r"\[(error|crit|alert|emerg)\]"), None),
+    ("Backup", f"{REPO}/home/backup.log", re.compile(r"FAILED"), None),
 ] + [(a["name"], a["log_file"], re.compile(r"\b(ERROR|CRITICAL|FATAL)\b|Traceback"), None) for a in apps if a["log_file"]]
 errors = []
 for name, path, pattern, skip in sources:

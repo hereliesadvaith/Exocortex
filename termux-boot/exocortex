@@ -15,6 +15,8 @@ cd ~/exocortex || exit 1
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') boot"
   # Postgres, PostgREST, nginx: the home page at http://localhost/
   bash home/services.sh start
+  # cron, for the nightly backup (home/backup.sh)
+  if command -v crond >/dev/null && ! pgrep -x crond >/dev/null; then crond && echo "crond: started"; fi
   # The MCP server and ngrok need the network; give Wi-Fi/mobile data a moment.
   sleep 10
   bash start.sh -d
