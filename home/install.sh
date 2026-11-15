@@ -70,6 +70,19 @@ log "restarting PostgREST, reloading nginx"
 bash "$HOME_DIR/services.sh" restart-postgrest
 bash "$HOME_DIR/services.sh" start
 
+# ---- nightly backup -----------------------------------------------------------------
+# One crontab line, marked so running this again replaces it instead of adding another.
+if command -v crontab >/dev/null && command -v crond >/dev/null; then
+  CRON_MARK="# exocortex-backup"
+  { crontab -l 2>/dev/null | grep -vF "$CRON_MARK" || true
+    echo "0 5 * * * bash $HOME_DIR/backup.sh >> $HOME_DIR/backup.log 2>&1 $CRON_MARK"
+  } | crontab -
+  pgrep -x crond >/dev/null || crond
+  log "backup scheduled: every night at 05:00 (crontab -l)"
+else
+  echo "no cron, so no nightly backup: pkg install cronie, then run this again" >&2
+fi
+
 # ---- boot ---------------------------------------------------------------------------
 BOOT=$HOME/.termux/boot
 mkdir -p "$BOOT"

@@ -24,7 +24,7 @@ phone browser ──► nginx 127.0.0.1:80               │
 | Path | What |
 |---|---|
 | `server.py`, `start.sh`, `ngrok.yml` | MCP server and its ngrok tunnel |
-| `home/` | Home page: static files (and `/ui.css`, `/ui.js` for apps), `schema.sql`, `install.sh`, `services.sh`, `sync-api.sh`, nginx template |
+| `home/` | Home page: static files (and `/ui.css`, `/ui.js` for apps), `schema.sql`, `install.sh`, `services.sh`, `sync-api.sh`, `backup.sh`, nginx template |
 | `postgres/plpython/` | Builds PL/Python for Termux's Postgres |
 | `termux-boot/exocortex` | Starts everything after a reboot |
 
@@ -38,10 +38,10 @@ phone browser ──► nginx 127.0.0.1:80               │
 
 ```sh
 pkg update && pkg upgrade
-pkg install -y git python rust binutils python-cryptography postgresql nginx perl clang make curl
+pkg install -y git python rust binutils python-cryptography postgresql nginx perl clang make curl cronie
 ```
 
-FastMCP depends on a few packages written in Rust (`pydantic-core`, `rpds-py`, `watchfiles`) that have no ready-made Android builds, so pip compiles them on the phone; `rust` and `binutils` are for that, and `python-cryptography` is Termux's prebuilt `cryptography`. `perl`, `clang` and `make` build PL/Python.
+FastMCP depends on a few packages written in Rust (`pydantic-core`, `rpds-py`, `watchfiles`) that have no ready-made Android builds, so pip compiles them on the phone; `rust` and `binutils` are for that, and `python-cryptography` is Termux's prebuilt `cryptography`. `perl`, `clang` and `make` build PL/Python. `cronie` is cron, for the nightly backup.
 
 Then in Android settings: Apps → Termux and Termux:Boot → Battery → **Unrestricted**. Open Termux:Boot once so Android lets it run at boot (you can hide its icon afterwards, but don't disable it).
 
@@ -92,6 +92,8 @@ cp .env.example .env && chmod 600 .env && nano .env
 | `MCP_BASE_URL` | | `https://$NGROK_DOMAIN` | Public URL, if you use a different tunnel or proxy |
 | `MCP_HOST` / `MCP_PORT` | | `127.0.0.1` / `8000` | Where the server listens |
 | `SHELL_CWD` | | `~` | Where `shell` commands start when no `cwd` is given |
+| `BACKUP_REMOTE` | | none | rclone `remote:path` the nightly Postgres dumps are copied to (see [Backups](#backups)) |
+| `BACKUP_DIR` / `BACKUP_KEEP` | | `~/backups/postgres` / `7` | Where the dumps are kept on the phone, and how many |
 
 ### Tools
 
@@ -155,6 +157,26 @@ psql -U postgres -c 'select version()'
 
 Termux's package is built without it. `postgres/plpython/build.sh` builds `plpython3u` and `jsonb_plpython3u` against the installed Postgres (about a minute), installs them, holds the `postgresql` package so `pkg upgrade` can't break them, and runs a test that rolls back. `home/install.sh` runs it automatically if PL/Python is missing. Details and upgrade steps: [`postgres/plpython/README.md`](postgres/plpython/README.md).
 
+### Backups
+
+`home/backup.sh` writes a full dump (`pg_dumpall`: every database, and the roles) to `~/backups/postgres/postgres-all-<date>-<time>.sql.gz` and keeps the newest 7. cron runs it every night at 05:00, phone time; `home/install.sh` adds the crontab line. Each run adds a line to `home/backup.log` (`ok:` or `FAILED:`), and failures show on the home page. A dump is checked before it counts, and old ones are only removed after a good new one.
+
+To also keep the dumps off the phone, set up an [rclone](https://rclone.org) remote (`pkg install rclone`, then `rclone config`) and name it in `.env`:
+
+```sh
+BACKUP_REMOTE=gdrive:Backup/postgres
+```
+
+After each dump the script copies what's missing to the remote and deletes remote dumps older than 7 days. It deletes by age instead of mirroring the phone, so a wiped phone can't empty the remote. A failed upload is logged (`UPLOAD FAILED`) and retried the next night.
+
+The dumps contain role password hashes and all your data as plain SQL, and they're uploaded as they are; put an rclone `crypt` remote in front if the storage provider shouldn't be able to read them. For Google Drive, create your own client ID ([rclone's instructions](https://rclone.org/drive/#making-your-own-client-id)): rclone's shared one is slow and is being retired.
+
+Restore:
+
+```sh
+zcat ~/backups/postgres/postgres-all-<date>-<time>.sql.gz | psql -U postgres -X -f - postgres
+```
+
 ## 4. Home page
 
 ```sh
@@ -167,7 +189,8 @@ cd ~/exocortex && home/install.sh
 2. installs PostgREST 16.5 (static ARM64 build, checksum pinned) to `$PREFIX/bin/postgrest`;
 3. writes nginx's config: `$PREFIX/etc/nginx/nginx.conf` includes `exocortex.conf`, generated from `home/nginx.conf.in` (Termux's original is kept as `nginx.conf.orig`);
 4. starts Postgres, applies `home/schema.sql`, restarts PostgREST, starts or reloads nginx;
-5. installs the boot script.
+5. schedules the nightly backup (`crontab -l`) and starts cron;
+6. installs the boot script.
 
 Then open **http://localhost/** on the phone. Apps are at `http://localhost/<app>/`.
 
@@ -223,7 +246,7 @@ on conflict (id) do update set name = excluded.name, description = excluded.desc
 
 ## 5. Start on boot
 
-`home/install.sh` installs `termux-boot/exocortex` as `~/.termux/boot/exocortex`. After a reboot it takes a wake lock, runs `home/services.sh start` (Postgres, PostgREST, nginx), waits 10 seconds for the network, then `./start.sh -d`. Output goes to `~/exocortex/boot.log`. It also clears a stale Postgres PID file left by an unclean shutdown.
+`home/install.sh` installs `termux-boot/exocortex` as `~/.termux/boot/exocortex`. After a reboot it takes a wake lock, runs `home/services.sh start` (Postgres, PostgREST, nginx), starts cron, waits 10 seconds for the network, then `./start.sh -d`. Output goes to `~/exocortex/boot.log`. It also clears a stale Postgres PID file left by an unclean shutdown.
 
 ## Troubleshooting
 
@@ -235,6 +258,7 @@ on conflict (id) do update set name = excluded.name, description = excluded.desc
 | `ngrok.log`: `lookup ... on [::1]:53 ... connection refused` | ngrok was started without `ngrok.yml` (an old `start.sh`?). See [ngrok](#ngrok). |
 | `ngrok.log`: `read udp ... :53: i/o timeout` | The network briefly dropped DNS; ngrok keeps retrying. If it lasts, check the phone's connection. |
 | `ngrok.log`: `ERR_NGROK_108` / domain already in use | Another ngrok agent is connected with your account (an old process or another device). `pkill -f 'ngrok http'`, check the ngrok dashboard's Agents page, then `./start.sh restart`. |
+| `home/backup.log`: `UPLOAD FAILED` | The dump itself is fine and still on the phone. Run `rclone lsd <remote>:` to see why rclone can't reach the remote; the next run uploads what's missing. |
 | `ngrok.log`: `unable to check interfaces ... netlinkrib: permission denied` | Harmless: Android hides network interfaces from apps. |
 | Home page: "Can't reach the home API" | `home/services.sh status`; start what's down with `home/services.sh start`. |
 | Postgres won't start after an unclean shutdown: `lock file "postmaster.pid" already exists` | `home/services.sh start` removes a stale PID file; or delete `$PREFIX/var/lib/postgresql/postmaster.pid` if no Postgres is running. |
